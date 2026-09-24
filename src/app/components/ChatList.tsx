@@ -1,23 +1,263 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
-import { Search, Filter, Plus, Menu, Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, CheckSquare, ChevronDown, Check, UserCheck, Tag, StickyNote, UserX, CheckCheck, RotateCcw, Clock, AlertCircle } from 'lucide-react';
+import { Search, Filter, Plus, Menu, Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, Phone, Download, Info, PhoneMissed, PhoneIncoming, PhoneOutgoing } from 'lucide-react';
 import { DateRange } from './DateFilter';
 import { FilterDialog } from './FilterDialog';
 import ConversationListUnselected from '../imports/ConversationListUnselected';
 import NewMessageIconContainer from '../imports/NewMessageIconContainer';
 import WhatsApp from '../imports/WhatsApp';
+import { CallDetailPanel } from './CallDetailPanel';
+import svgPaths from '../imports/svg-etfg2lzkn3';
+import { VoipAvatar } from './VoipAvatar';
+import { AstraStarButton } from './AstraStarButton';
+import { CallHandlerLabel } from './CallHandlerLabel';
+import { VoipCallButton } from './VoipCallButton';
+import { voipCallerLabel, VOIP_CALLS } from '../data/voipCalls';
 
-const BULK_LIMIT = 100;
+// Mock agent names for each contact
+const AGENT_NAMES: Record<string, string> = {
+  'Addison Smith': 'Melvis',
+  'Marcus Allen': 'Rohit',
+  'April Boyer': 'Maria',
+  'Sarah Johnson': 'Dylan',
+  'David Chen': 'Nia'
+};
 
-const MOCK_AGENTS = [
-  { id: 'a1', name: 'Dr. Sarah Lee', avatar: 'SL', role: 'Support' },
-  { id: 'a2', name: 'James Nurse', avatar: 'JN', role: 'Support' },
-  { id: 'a3', name: 'Dr. Patel', avatar: 'DP', role: 'Sales' },
-  { id: 'a4', name: 'Maria Kim', avatar: 'MK', role: 'Sales' },
+// Mock time data for each call
+const CALL_TIMES: Record<string, string> = {
+  'Addison Smith': '9:10 PM',
+  'Marcus Allen': '10:15 AM',
+  'April Boyer': '1:45 PM',
+  'Sarah Johnson': '3:30 PM',
+  'David Chen': '2:00 PM'
+};
+
+// Mock call history data for each contact
+const CALL_HISTORY_DATA: Record<string, any[]> = {
+  'Addison Smith': [
+    {
+      id: 'hist-1',
+      date: 'Feb 2, 2026',
+      time: '2:30 PM',
+      type: 'inbound',
+      status: 'connected',
+      duration: '0m 15s',
+      hasTranscription: false,
+      notes: 'Currently incoming...'
+    },
+    {
+      id: 'hist-2',
+      date: 'Feb 2, 2026',
+      time: '10:15 AM',
+      type: 'outbound',
+      status: 'connected',
+      duration: '5m 32s',
+      hasTranscription: true
+    },
+    {
+      id: 'hist-3',
+      date: 'Feb 1, 2026',
+      time: '4:45 PM',
+      type: 'inbound',
+      status: 'connected',
+      duration: '3m 12s',
+      hasTranscription: true,
+      notes: 'Customer requested callback for technical support'
+    },
+    {
+      id: 'hist-4',
+      date: 'Feb 1, 2026',
+      time: '9:20 AM',
+      type: 'missed',
+      status: 'no-answer'
+    },
+    {
+      id: 'hist-5',
+      date: 'Jan 31, 2026',
+      time: '2:10 PM',
+      type: 'outbound',
+      status: 'connected',
+      duration: '8m 45s',
+      hasTranscription: true
+    }
+  ],
+  'Marcus Allen': [
+    {
+      id: 'hist-6',
+      date: 'Feb 2, 2026',
+      time: '12:00 PM',
+      type: 'outbound',
+      status: 'connected',
+      duration: '4m 12s',
+      hasTranscription: true
+    },
+    {
+      id: 'hist-7',
+      date: 'Feb 1, 2026',
+      time: '3:30 PM',
+      type: 'outbound',
+      status: 'no-answer'
+    },
+    {
+      id: 'hist-8',
+      date: 'Jan 30, 2026',
+      time: '11:15 AM',
+      type: 'inbound',
+      status: 'connected',
+      duration: '2m 30s',
+      hasTranscription: true
+    }
+  ],
+  'April Boyer': [
+    {
+      id: 'hist-9',
+      date: 'Feb 1, 2026',
+      time: '5:45 PM',
+      type: 'missed',
+      status: 'no-answer',
+      notes: 'Need to call back - important order inquiry'
+    },
+    {
+      id: 'hist-10',
+      date: 'Jan 31, 2026',
+      time: '1:20 PM',
+      type: 'outbound',
+      status: 'connected',
+      duration: '6m 15s',
+      hasTranscription: true
+    },
+    {
+      id: 'hist-11',
+      date: 'Jan 30, 2026',
+      time: '10:00 AM',
+      type: 'inbound',
+      status: 'connected',
+      duration: '3m 45s',
+      hasTranscription: true
+    }
+  ],
+  'Sarah Johnson': [
+    {
+      id: 'hist-12',
+      date: 'Feb 2, 2026',
+      time: '11:30 AM',
+      type: 'unanswered',
+      status: 'no-answer'
+    },
+    {
+      id: 'hist-13',
+      date: 'Feb 1, 2026',
+      time: '2:15 PM',
+      type: 'outbound',
+      status: 'voicemail',
+      notes: 'Left voicemail regarding account update'
+    },
+    {
+      id: 'hist-14',
+      date: 'Jan 29, 2026',
+      time: '4:00 PM',
+      type: 'inbound',
+      status: 'connected',
+      duration: '7m 20s',
+      hasTranscription: true
+    }
+  ],
+  'David Chen': [
+    {
+      id: 'hist-15',
+      date: 'Feb 2, 2026',
+      time: '2:45 PM',
+      type: 'outbound',
+      status: 'connected',
+      duration: '12m 30s',
+      hasTranscription: false,
+      notes: 'Call in progress...'
+    },
+    {
+      id: 'hist-16',
+      date: 'Feb 1, 2026',
+      time: '11:00 AM',
+      type: 'inbound',
+      status: 'connected',
+      duration: '5m 15s',
+      hasTranscription: true
+    },
+    {
+      id: 'hist-17',
+      date: 'Jan 31, 2026',
+      time: '3:45 PM',
+      type: 'outbound',
+      status: 'connected',
+      duration: '4m 50s',
+      hasTranscription: true
+    },
+    {
+      id: 'hist-18',
+      date: 'Jan 30, 2026',
+      time: '9:30 AM',
+      type: 'missed',
+      status: 'no-answer'
+    }
+  ]
+};
+
+// Mock calls data
+const MOCK_CALLS = [
+  {
+    id: 'call-1',
+    name: 'Addison Smith',
+    phoneNumber: '+18765432210',
+    type: 'incoming' as const,
+    status: 'Inbound call',
+    avatar: 'AS'
+  },
+  {
+    id: 'call-2', 
+    name: 'Marcus Allen',
+    phoneNumber: '+15551234567',
+    type: 'outgoing' as const,
+    status: 'Outbound call',
+    avatar: 'MA'
+  },
+  {
+    id: 'call-3',
+    name: 'April Boyer', 
+    phoneNumber: '+15551234567',
+    type: 'missed' as const,
+    status: 'Missed call',
+    avatar: 'AB'
+  },
+  {
+    id: 'call-4',
+    name: 'Sarah Johnson',
+    phoneNumber: '+15559876543',
+    type: 'unanswered' as const,
+    status: 'Unanswered call',
+    avatar: 'SJ'
+  },
+  {
+    id: 'call-5',
+    name: 'David Chen',
+    phoneNumber: '+15554567890',
+    type: 'active' as const,
+    status: 'On call',
+    avatar: 'DC'
+  }
 ];
+
+// Mock VoIP call records (external VoIP API channel). Each maps to a
+// transcription entry (voip-N) rendered in the center content area.
+interface Call {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  type: 'incoming' | 'missed' | 'outgoing' | 'unanswered' | 'active';
+  status?: string;
+  avatar?: string;
+}
 
 interface FilterSegment {
   attribute: string;
@@ -25,23 +265,12 @@ interface FilterSegment {
   value: string;
 }
 
-type BulkAction =
-  | { type: 'solve' }
-  | { type: 'reopen' }
-  | { type: 'pending' }
-  | { type: 'assign'; agentId: string; agentName: string }
-  | { type: 'unassign' }
-  | { type: 'tag'; tag: string }
-  | { type: 'note'; note: string };
-
 interface ChatListProps {
   chats: Array<{
     id: string;
     name: string;
     avatar: string;
     lastMessage: string;
-    subject?: string;
-    preview?: string;
     timestamp: string;
     date: Date;
     status: string;
@@ -64,7 +293,6 @@ interface ChatListProps {
     category: string;
   };
   onSelectChat: (chat: any) => void;
-  onBulkAction?: (chatIds: string[], action: BulkAction) => void;
   isSidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   dateRange: DateRange;
@@ -73,7 +301,22 @@ interface ChatListProps {
   onCustomFilterApply: (filters: FilterSegment[], showOldChatsFirst: boolean, saveAsCustom?: boolean, customFilterName?: string) => void;
   selectedFilter: string;
   selectedChannel: string;
-  onComposeEmail?: () => void;
+  onSelectCallTranscription?: (chat: any, callId: string) => void;
+  onCallContact?: (phoneNumber: string) => void;
+  onSelectVoipCall?: (callId: string) => void;
+  allChats?: Array<{
+    id: string;
+    name: string;
+    avatar: string;
+    lastMessage: string;
+    timestamp: string;
+    date: Date;
+    status: string;
+    channel: string;
+    isOnline: boolean;
+    unread: boolean;
+    category: string;
+  }>;
 }
 
 type PresetKey = 'today' | 'thisweek' | 'thismonth' | 'custom';
@@ -135,12 +378,11 @@ const DATE_PRESETS: DatePreset[] = [
   }
 ];
 
-export function ChatList({
-  chats,
-  selectedChat,
-  onSelectChat,
-  onBulkAction,
-  isSidebarCollapsed,
+export function ChatList({ 
+  chats, 
+  selectedChat, 
+  onSelectChat, 
+  isSidebarCollapsed, 
   onToggleSidebar,
   dateRange,
   onDateRangeChange,
@@ -148,7 +390,10 @@ export function ChatList({
   onCustomFilterApply,
   selectedFilter,
   selectedChannel,
-  onComposeEmail
+  onSelectCallTranscription,
+  allChats,
+  onCallContact,
+  onSelectVoipCall
 }: ChatListProps) {
   const [selectedTab, setSelectedTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -162,117 +407,19 @@ export function ChatList({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isNewMessagePopoverOpen, setIsNewMessagePopoverOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Bulk selection state
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
-  const [isActionsOpen, setIsActionsOpen] = useState(false);
-  const [isAssignSubmenuOpen, setIsAssignSubmenuOpen] = useState(false);
-  const [bulkToast, setBulkToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const actionsRef = useRef<HTMLDivElement>(null);
-
-  const isSelectionMode = selectedIds.size > 0;
-  const atLimit = selectedIds.size >= BULK_LIMIT;
-
-  // Close actions dropdown on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
-        setIsActionsOpen(false);
-        setIsAssignSubmenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // Auto-dismiss toast
-  useEffect(() => {
-    if (bulkToast) {
-      const t = setTimeout(() => setBulkToast(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [bulkToast]);
-
-  // NOTE: filteredChats is computed below, but we use `chats` prop here for range selection
-  // since `chats` already reflects the parent-level filter and is stable for ordering.
-  const handleCheckboxClick = useCallback((chatId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const isShift = e.shiftKey;
-
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-
-      if (isShift && lastSelectedId) {
-        // Range selection within chats (prop) order
-        const ids = chats.map(c => c.id);
-        const fromIdx = ids.indexOf(lastSelectedId);
-        const toIdx = ids.indexOf(chatId);
-        if (fromIdx !== -1 && toIdx !== -1) {
-          const [start, end] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
-          const range = ids.slice(start, end + 1);
-          // Check if adding would exceed limit
-          const potentialSize = new Set([...next, ...range]).size;
-          if (potentialSize > BULK_LIMIT) {
-            setBulkToast({ message: `Max ${BULK_LIMIT} conversations can be selected at once.`, type: 'error' });
-            return prev;
-          }
-          range.forEach(id => next.add(id));
-        }
-      } else {
-        if (next.has(chatId)) {
-          next.delete(chatId);
-        } else {
-          if (next.size >= BULK_LIMIT) {
-            setBulkToast({ message: `Max ${BULK_LIMIT} conversations can be selected at once.`, type: 'error' });
-            return prev;
-          }
-          next.add(chatId);
-        }
-      }
-      return next;
-    });
-    setLastSelectedId(chatId);
-  }, [lastSelectedId, chats]);
-
-  const handleSelectAll = (visibleChats: typeof chats) => {
-    const all = visibleChats.slice(0, BULK_LIMIT).map(c => c.id);
-    setSelectedIds(new Set(all));
-    if (visibleChats.length > BULK_LIMIT) {
-      setBulkToast({ message: `Showing first ${BULK_LIMIT} of ${visibleChats.length} conversations selected.`, type: 'error' });
-    }
-  };
-
-  const handleDeselectAll = () => {
-    setSelectedIds(new Set());
-    setLastSelectedId(null);
-    setIsActionsOpen(false);
-    setIsAssignSubmenuOpen(false);
-  };
-
-  const applyBulkAction = (action: BulkAction) => {
-    const ids = Array.from(selectedIds);
-    onBulkAction?.(ids, action);
-    setIsActionsOpen(false);
-    setIsAssignSubmenuOpen(false);
-
-    const labels: Record<string, string> = {
-      solve: 'Resolved',
-      reopen: 'Reopened',
-      pending: 'Moved to Pending',
-      assign: `Assigned to ${(action as any).agentName}`,
-      unassign: 'Unassigned',
-      tag: `Tagged "${(action as any).tag}"`,
-      note: 'Note added',
-    };
-    setBulkToast({ message: `${ids.length} conversation${ids.length > 1 ? 's' : ''} — ${labels[action.type]}.`, type: 'success' });
-    handleDeselectAll();
-  };
-
-  const tabs = ['All', 'Open', 'Unread'];
+  const [selectedCallDetail, setSelectedCallDetail] = useState<Call | null>(null);
+  const [viewingContactHistory, setViewingContactHistory] = useState<string | null>(null);
+  const [selectedCallRecordId, setSelectedCallRecordId] = useState<string | null>(null);
 
   // Check if WhatsApp functionality should be available
   const isWhatsAppFeatures = selectedChannel === 'WhatsApp';
+  const isWhatsAppCalls = selectedChannel === 'WhatsApp Calls';
+  const isVoipCalls = selectedChannel === 'VoIP';
+
+  // Different tabs based on selected channel
+  const tabs = (isWhatsAppCalls || isVoipCalls)
+    ? ['All', 'Incoming', 'Outgoing', 'Missed']
+    : ['All', 'Open', 'Unread'];
 
   // Focus search input when search is expanded
   useEffect(() => {
@@ -296,6 +443,53 @@ export function ChatList({
       setIsSearchExpanded(true);
     }
   };
+
+  // Filter calls for WhatsApp Calls channel
+  const filteredCalls = MOCK_CALLS.filter(call => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      if (!call.name.toLowerCase().includes(query) && 
+          !call.phoneNumber.toLowerCase().includes(query)) {
+        return false;
+      }
+    }
+
+    // Tab filter for calls
+    switch (selectedTab) {
+      case 'All':
+        return true;
+      case 'Incoming':
+        return call.type === 'incoming';
+      case 'Outgoing':
+        return call.type === 'outgoing';
+      case 'Missed':
+        return call.type === 'missed' || call.type === 'unanswered';
+      default:
+        return true;
+    }
+  });
+
+  // Filter VoIP call records
+  const filteredVoipCalls = VOIP_CALLS.filter(call => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      if (!call.name.toLowerCase().includes(query) &&
+          !call.phoneNumber.toLowerCase().includes(query)) {
+        return false;
+      }
+    }
+    switch (selectedTab) {
+      case 'Incoming':
+        return call.type === 'incoming';
+      case 'Outgoing':
+        return call.type === 'outgoing';
+      case 'Missed':
+        return call.type === 'missed';
+      default:
+        return true;
+    }
+  });
 
   const filteredChats = chats.filter(chat => {
     // Search filter
@@ -385,6 +579,72 @@ export function ChatList({
     });
   };
 
+  // Call handlers
+  const handleDeclineCall = (callId: string) => {
+    console.log(`Declining call from ${callId}`);
+    // Here you would implement the decline logic
+  };
+
+  const handleExportCalls = () => {
+    console.log('Exporting calls data');
+    // Here you would implement the export logic
+  };
+
+  const handleAnswerCall = (callId: string) => {
+    console.log(`Answering call from ${callId}`);
+    // Find the corresponding chat and navigate to it
+    const call = MOCK_CALLS.find(c => c.id === callId);
+    console.log('Found call:', call);
+    console.log('Available chats:', chats.map(c => ({ id: c.id, name: c.name, channel: c.channel })));
+    
+    if (call) {
+      // Find the corresponding chat in the chats array
+      const correspondingChat = chats.find(chat => chat.name === call.name);
+      console.log('Found corresponding chat:', correspondingChat);
+      
+      if (correspondingChat) {
+        // Switch to the appropriate channel first, then select the chat
+        if (correspondingChat.channel !== selectedChannel) {
+          // We need to switch channels - this should be handled by the parent
+          console.log(`Switching from ${selectedChannel} to ${correspondingChat.channel}`);
+        }
+        console.log('Calling onSelectChat with:', correspondingChat);
+        onSelectChat(correspondingChat);
+      } else {
+        console.log(`No chat found for call from ${call.name}`);
+      }
+    }
+  };
+
+  const handleCallClick = (call: any) => {
+    console.log('Call clicked:', call);
+    // Set the contact name to view their call history
+    setViewingContactHistory(call.name);
+  };
+
+  const handleChatClick = (chat: any) => {
+    // Check if this contact has call history with transcriptions
+    const callHistory = CALL_HISTORY_DATA[chat.name];
+    
+    if (callHistory && callHistory.length > 0) {
+      // Find the most recent call with transcription
+      const mostRecentCallWithTranscription = callHistory.find(call => call.hasTranscription);
+      
+      if (mostRecentCallWithTranscription && onSelectCallTranscription) {
+        // If there's a call with transcription, show it
+        onSelectCallTranscription(chat, mostRecentCallWithTranscription.id);
+        return;
+      }
+    }
+    
+    // Otherwise, just select the chat normally
+    onSelectChat(chat);
+  };
+
+  const handleBackToList = () => {
+    setViewingContactHistory(null);
+  };
+
   const isFilterActive = dateRange.from && dateRange.to;
   const activePreset = getActivePreset();
   const hasCustomFilters = customFilters.length > 0 && customFilters.some(f => 
@@ -419,7 +679,12 @@ export function ChatList({
                   {selectedFilter}
                 </h2>
                 <p className="text-sm text-gray-500 mt-0.5">
-                  {filteredChats.length} Chats • <span className="font-semibold">{filteredChats.filter(chat => chat.unread).length} Unread</span>
+                  {isWhatsAppCalls
+                    ? `${filteredCalls.length} Calls • ${filteredCalls.filter(call => call.type === 'incoming').length} Incoming`
+                    : isVoipCalls
+                    ? `${filteredVoipCalls.length} Calls • ${filteredVoipCalls.filter(call => call.type === 'incoming').length} Incoming`
+                    : `${filteredChats.length} Chats • ${filteredChats.filter(chat => chat.unread).length} Unread`
+                  }
                 </p>
               </div>
             </div>
@@ -456,31 +721,21 @@ export function ChatList({
                 </Button>
               )}
               
-              {/* Compose a new email - only meaningful on the Email channel */}
-              {selectedChannel === 'Email' && onComposeEmail && (
-                <Button
-                  variant="ghost"
-                  size="sm"
+              {/* Export Button - Only for WhatsApp Calls */}
+              {isWhatsAppCalls && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
                   className="h-8 w-8 p-0 transition-all duration-200"
-                  onClick={onComposeEmail}
-                  title="New email"
                 >
-                  <Plus className="w-4 h-4 text-gray-500" />
+                  <Download className="w-4 h-4 text-gray-500" />
                 </Button>
               )}
 
               {/* Date Filter Popover - Always available */}
               <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <PopoverTrigger asChild>
-                  <button 
-                    className="h-8 w-8 p-0 rounded-md transition-colors hover:bg-gray-100 flex items-center justify-center text-gray-500 relative"
-                    onClick={() => setIsFilterOpen(!isFilterOpen)}
-                  >
-                    <CalendarIcon className="w-4 h-4" />
-                    {isFilterActive && (
-                      <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></div>
-                    )}
-                  </button>
+                  
                 </PopoverTrigger>
                 <PopoverContent className="w-[420px] p-0" align="end">
                   <div className="flex">
@@ -692,241 +947,430 @@ export function ChatList({
       {/* Divider between header and filter tabs */}
       <div className="border-b border-[#F4F1ED]"></div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center space-x-2 px-4 py-3 bg-white">
-        {tabs.map((tab) => {
-          const isSelected = selectedTab === tab;
-          return (
-            <button
-              key={tab}
-              onClick={() => setSelectedTab(tab)}
-              className={`px-2 py-0.5 rounded-full text-sm font-medium transition-all duration-200 border ${
-                isSelected 
-                  ? 'bg-green-600 text-white border-green-600 shadow-sm' 
-                  : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200 hover:border-gray-300'
-              }`}
-            >
-              {tab}
-            </button>
-          );
-        })}
-        
-        {/* Active Date Filter Indicator */}
-        {isFilterActive && (
-          <div className="flex items-center ml-2">
-            <Badge variant="secondary" className="text-xs">
-              {activePreset === 'today' && 'Today'}
-              {activePreset === 'thisweek' && 'This week'}
-              {activePreset === 'thismonth' && 'This month'}
-              {activePreset === 'custom' && 'Custom date'}
-            </Badge>
-          </div>
-        )}
-
-        {/* Active Custom Filter Indicator */}
-        {hasCustomFilters && (
-          <div className="flex items-center ml-2">
-            <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-              Custom filter
-            </Badge>
-          </div>
-        )}
-      </div>
-
-      {/* Bulk Selection Bar */}
-      {isSelectionMode && (
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-[#F0FDF4] sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            {/* Deselect all */}
-            <button
-              onClick={handleDeselectAll}
-              className="p-1 rounded hover:bg-green-100 transition-colors"
-              title="Clear selection"
-            >
-              <X className="w-4 h-4 text-gray-500" />
-            </button>
-
-            {/* Count + select all */}
-            <span className="text-sm font-semibold text-gray-800">
-              {selectedIds.size} selected
-            </span>
-            {selectedIds.size < filteredChats.length && filteredChats.length <= BULK_LIMIT && (
+      {/* Filter Tabs - Hide when viewing contact history */}
+      {!(isWhatsAppCalls && viewingContactHistory) && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-white overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {tabs.map((tab) => {
+            const isSelected = selectedTab === tab;
+            return (
               <button
-                onClick={() => handleSelectAll(filteredChats)}
-                className="text-xs text-green-700 hover:underline font-medium"
+                key={tab}
+                onClick={() => setSelectedTab(tab)}
+                className={`shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full text-sm font-medium transition-all duration-200 border ${
+                  isSelected
+                    ? isVoipCalls
+                      ? 'bg-wati-green text-white border-wati-green shadow-sm'
+                      : 'bg-green-600 text-white border-green-600 shadow-sm'
+                    : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200 hover:border-gray-300'
+                }`}
               >
-                Select all {filteredChats.length}
+                {tab}
               </button>
-            )}
-            {atLimit && (
-              <span className="text-xs text-amber-600 flex items-center gap-0.5">
-                <AlertCircle className="w-3 h-3" /> Max {BULK_LIMIT}
-              </span>
-            )}
-          </div>
+            );
+          })}
+          
+          {/* Active Date Filter Indicator */}
+          {isFilterActive && (
+            <div className="flex items-center ml-2">
+              <Badge variant="secondary" className="text-xs">
+                {activePreset === 'today' && 'Today'}
+                {activePreset === 'thisweek' && 'This week'}
+                {activePreset === 'thismonth' && 'This month'}
+                {activePreset === 'custom' && 'Custom date'}
+              </Badge>
+            </div>
+          )}
 
-          {/* Actions button */}
-          <div className="relative" ref={actionsRef}>
-            <button
-              onClick={() => setIsActionsOpen(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-md transition-colors"
-              style={{ backgroundColor: '#16A34A' }}
-            >
-              Actions
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
+          {/* Active Custom Filter Indicator */}
+          {hasCustomFilters && (
+            <div className="flex items-center ml-2">
+              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                Custom filter
+              </Badge>
+            </div>
+          )}
+        </div>
+      )}
 
-            {isActionsOpen && (
-              <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden py-1">
-                {/* Resolve */}
-                <button
-                  onClick={() => applyBulkAction({ type: 'solve' })}
-                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
+      {/* Chat List or Calls List */}
+      <div className="flex-1 overflow-y-auto">
+        {isWhatsAppCalls ? (
+          viewingContactHistory ? (
+            // Detail view - showing all calls with a specific contact
+            <>
+              {/* Back button header */}
+              <div className="sticky top-0 bg-white border-b border-[#e7e9e8] flex items-center gap-3 z-10 p-[10px]">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={handleBackToList}
                 >
-                  <CheckCheck className="w-4 h-4 text-green-600" />
-                  <span>Resolve conversations</span>
-                </button>
+                  <ChevronLeft className="w-5 h-5 text-gray-700" />
+                </Button>
+                <h3 className="font-['Inter'] font-semibold text-[16px] leading-[24px] text-[#505451]">
+                  Calls with {viewingContactHistory}
+                </h3>
+              </div>
 
-                {/* Reopen */}
-                <button
-                  onClick={() => applyBulkAction({ type: 'reopen' })}
-                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
-                >
-                  <RotateCcw className="w-4 h-4 text-blue-600" />
-                  <span>Reopen conversations</span>
-                </button>
-
-                {/* Pending */}
-                <button
-                  onClick={() => applyBulkAction({ type: 'pending' })}
-                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
-                >
-                  <Clock className="w-4 h-4 text-amber-500" />
-                  <span>Move to Pending</span>
-                </button>
-
-                <div className="h-px bg-gray-100 my-1" />
-
-                {/* Assign — has submenu */}
-                <div className="relative">
-                  <button
-                    onClick={() => setIsAssignSubmenuOpen(v => !v)}
-                    className="flex items-center justify-between gap-2.5 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
+              {/* Call history list */}
+              {CALL_HISTORY_DATA[viewingContactHistory]?.map((historyCall, index) => {
+                // Find the corresponding chat for this contact - search in ALL chats, not just filtered
+                const searchChats = allChats || chats;
+                const correspondingChat = searchChats.find(chat => chat.name === viewingContactHistory);
+                const isCallSelected = selectedCallRecordId === historyCall.id;
+                
+                return (
+                  <div 
+                    key={historyCall.id}
+                    className={`relative px-4 py-4 border-b border-[#e7e9e8] hover:bg-gray-50/50 transition-colors cursor-pointer ${
+                      isCallSelected ? 'bg-[#ebf7f0]' : ''
+                    }`}
+                    onClick={() => {
+                      console.log('Call clicked:', historyCall.id);
+                      console.log('Viewing contact:', viewingContactHistory);
+                      console.log('Searching in chats (length):', searchChats.length);
+                      console.log('Corresponding chat found:', correspondingChat);
+                      console.log('onSelectCallTranscription exists:', !!onSelectCallTranscription);
+                      
+                      // Set this call as selected
+                      setSelectedCallRecordId(historyCall.id);
+                      
+                      if (correspondingChat && onSelectCallTranscription) {
+                        // Select the chat and set to transcription tab
+                        onSelectCallTranscription(correspondingChat, historyCall.id);
+                      } else {
+                        console.error('Missing correspondingChat or onSelectCallTranscription');
+                        if (!correspondingChat) console.error('Could not find chat with name:', viewingContactHistory);
+                        if (!onSelectCallTranscription) console.error('onSelectCallTranscription function not provided');
+                      }
+                    }}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <UserCheck className="w-4 h-4 text-purple-600" />
-                      <span>Assign to agent</span>
-                    </div>
-                    <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isAssignSubmenuOpen ? 'rotate-180' : ''}`} />
-                  </button>
+                    {/* Left border indicator for selected call */}
+                    {isCallSelected && (
+                      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#69e48e]" />
+                    )}
+                    
+                    <div className="flex items-start gap-3">
+                      {/* Call type icon */}
+                      <div className="flex-shrink-0 mt-0.5">
+                        {historyCall.type === 'inbound' ? (
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+                              <path d={svgPaths.p21a43400} fill="#23a455" />
+                            </svg>
+                          </div>
+                        ) : historyCall.type === 'outbound' ? (
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+                              <path d={svgPaths.pe3ccb00} fill="#23a455" />
+                            </svg>
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 flex items-center justify-center">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
+                              <path d={svgPaths.p3c155c80} fill="#ef5766" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
 
-                  {isAssignSubmenuOpen && (
-                    <div className="bg-gray-50 border-t border-b border-gray-100">
-                      {MOCK_AGENTS.map(agent => (
-                        <button
-                          key={agent.id}
-                          onClick={() => applyBulkAction({ type: 'assign', agentId: agent.id, agentName: agent.name })}
-                          className="flex items-center gap-2.5 w-full pl-8 pr-3 py-2 text-sm text-left hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="size-6 rounded-full bg-purple-100 flex items-center justify-center text-[10px] font-bold text-purple-700 shrink-0">
-                            {agent.avatar}
+                      {/* Call details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex-1">
+                            <p className="font-['Inter'] font-semibold text-[14px] leading-[20px] text-[#505451]">
+                              {historyCall.type === 'inbound' ? 'Inbound Call' : 
+                               historyCall.type === 'outbound' ? 'Outbound Call' : 
+                               'Missed Call'}
+                            </p>
+                            {historyCall.duration && (
+                              <p className="font-['Inter'] font-normal text-[12px] leading-[16px] text-[#848a86] mt-0.5">
+                                Duration: {historyCall.duration}
+                              </p>
+                            )}
                           </div>
-                          <div>
-                            <div className="font-medium text-gray-800 text-xs">{agent.name}</div>
-                            <div className="text-[11px] text-gray-400">{agent.role}</div>
+                          <div className="flex-shrink-0">
+                            
+                            <p className="font-['Inter'] font-normal text-[12px] leading-[16px] text-[#848a86] text-right mt-0.5">
+                              {historyCall.time}
+                            </p>
                           </div>
-                        </button>
-                      ))}
+                        </div>
+
+                        {/* View Transcription link - show for all completed calls */}
+                        {historyCall.status === 'connected' && historyCall.duration && (
+                          <div className="flex items-center gap-2 mt-2">
+                            
+                          </div>
+                        )}
+
+                        {/* Notes */}
+                        {historyCall.notes && (
+                          null
+                        )}
+                      </div>
                     </div>
+                  </div>
+                );
+              })}
+            </>
+          ) : (
+          // Main list - showing contacts with call counts
+          // Render calls when WhatsApp Calls channel is selected
+          <>
+            {filteredCalls.map((call) => {
+              const agentName = AGENT_NAMES[call.name] || 'Agent';
+              const callTime = CALL_TIMES[call.name] || '00:00';
+              const interactionCount = CALL_HISTORY_DATA[call.name]?.length || 0;
+              const isSelected = selectedChat.name === call.name;
+              
+              return (
+                <div 
+                  key={call.id} 
+                  className={`relative bg-white ${isSelected ? 'bg-[#ebf7f0]' : ''}`}
+                  onClick={() => handleCallClick(call)}
+                >
+                  {/* Left border indicator for selected items */}
+                  {isSelected && (
+                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#69e48e]" />
+                  )}
+                  
+                  <div className="flex items-start gap-2 px-3 py-4 cursor-pointer hover:bg-gray-50/50 transition-colors border-b border-[#e7e9e8]">
+                    {/* Avatar with status indicators */}
+                    <div className="relative shrink-0 w-8 h-8">
+                      {/* Main avatar */}
+                      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 32 32">
+                        <path d={svgPaths.p4f1e480} fill="url(#paint0_linear_10058_723)" id="Vector" />
+                        <defs>
+                          <linearGradient gradientUnits="userSpaceOnUse" id="paint0_linear_10058_723" x1="16" x2="16" y1="0" y2="32">
+                            <stop stopColor="#E0FFDE" />
+                            <stop offset="1" stopColor="#D0DFCF" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      {/* Online status indicator (green smile) at bottom */}
+                      <div className="absolute inset-[74.63%_16.11%_0_16.11%]" data-name="Vector">
+                        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 21.691 8.11987">
+                          <path d={svgPaths.pd235c00} fill="#23A455" id="Vector" />
+                        </svg>
+                      </div>
+                      {/* User icon */}
+                      <div className="absolute inset-[25.97%_32.83%_39.68%_32.82%]" data-name="Vector">
+                        <div className="absolute inset-[-9.1%]">
+                          <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 12.9919 12.9919">
+                            <path d={svgPaths.p3ca3d680} id="Vector" stroke="#23A455" strokeMiterlimit="10" strokeWidth="2" />
+                          </svg>
+                        </div>
+                      </div>
+                      {/* Call status badge */}
+                      <div className={`absolute -translate-y-1/2 aspect-[16/16] border border-solid border-white left-1/2 right-0 rounded-lg top-[calc(50%+8px)] w-3 h-3 flex items-center justify-center ${
+                        call.type === 'missed' || call.type === 'unanswered' ? 'bg-[#ef5766]' : 'bg-[#23a455]'
+                      }`}>
+                        {call.type === 'missed' || call.type === 'unanswered' ? (
+                          <svg className="w-3 h-3" fill="none" preserveAspectRatio="none" viewBox="0 0 12 12">
+                            <path d={svgPaths.p3c155c80} fill="white" />
+                          </svg>
+                        ) : call.type === 'outgoing' ? (
+                          <svg className="w-3 h-3" fill="none" preserveAspectRatio="none" viewBox="0 0 12 12">
+                            <path d={svgPaths.pe3ccb00} fill="white" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3 h-3" fill="none" preserveAspectRatio="none" viewBox="0 0 12 12">
+                            <path d={svgPaths.p21a43400} fill="white" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Top row: Name, separator, agent */}
+                      <div className="flex items-center gap-2.5 mb-0.5">
+                        <div className="flex items-center gap-1">
+                          <p className="font-['Inter'] font-bold text-[14px] leading-[20px] text-[#505451] flex-shrink-0">
+                            {call.name}
+                          </p>
+                          {interactionCount > 1 && (
+                            <span className="font-['Inter'] font-normal text-[12px] leading-[16px] text-[#848a86] ml-0.5">
+                              ({interactionCount})
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Vertical separator */}
+                        <div className="flex h-1.5 items-center justify-center w-0">
+                          <div className="rotate-90 h-0 w-1.5">
+                            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 6 1">
+                              <line stroke="#1B1D1C" strokeLinecap="round" strokeOpacity="0.4" x1="0.5" x2="5.5" y1="0.5" y2="0.5" />
+                            </svg>
+                          </div>
+                        </div>
+                        
+                        {/* Agent name with headset icon */}
+                        <div className="flex items-center gap-1">
+                          <div className="-scale-y-100 rotate-180">
+                            <svg className="w-4 h-4" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+                              <path d={svgPaths.p4357980} fill="#848A86" />
+                            </svg>
+                          </div>
+                          <p className="font-['Inter'] font-normal text-[12px] leading-[16px] text-[#848a86]">
+                            {agentName}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Bottom row: Call type and time */}
+                      <div className="flex items-center justify-between gap-0.5">
+                        <p className="font-['Inter'] font-normal text-[12px] leading-[16px] text-[#505451] flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                          {call.status}
+                        </p>
+                        {(call.type === 'missed' || call.type === 'unanswered') && (
+                          <AstraStarButton contactName={call.name} />
+                        )}
+                        <p className="font-['Inter'] font-normal text-[12px] leading-[16px] text-[#848a86] text-right flex-shrink-0">
+                          {callTime}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Phone icon button */}
+                    <div className="flex items-center pt-0.5">
+                      {call.type === 'unanswered' ? (
+                        <button 
+                          className="p-1 rounded-lg flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <svg className="w-4 h-4" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+                            <path d={svgPaths.p1f19c2b0} fill="#CED0CE" />
+                          </svg>
+                        </button>
+                      ) : (
+                        <button 
+                          className="p-1 rounded-lg flex items-center justify-center"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <svg className="w-4 h-4" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
+                            <path d={svgPaths.p1f19c2b0} fill="#505451" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {filteredCalls.length === 0 && (
+              <div className="flex items-center justify-center h-32 text-gray-500">
+                <div className="text-center">
+                  <p>No calls found</p>
+                  {searchQuery && (
+                    <p className="text-sm mt-1">Try adjusting your search terms</p>
                   )}
                 </div>
-
-                {/* Unassign */}
-                <button
-                  onClick={() => applyBulkAction({ type: 'unassign' })}
-                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
-                >
-                  <UserX className="w-4 h-4 text-gray-500" />
-                  <span>Unassign</span>
-                </button>
-
-                <div className="h-px bg-gray-100 my-1" />
-
-                {/* Add Tag */}
-                <button
-                  onClick={() => {
-                    const tag = window.prompt('Enter tag name:');
-                    if (tag?.trim()) applyBulkAction({ type: 'tag', tag: tag.trim() });
-                  }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
-                >
-                  <Tag className="w-4 h-4 text-orange-500" />
-                  <span>Add tag</span>
-                </button>
-
-                {/* Add Note */}
-                <button
-                  onClick={() => {
-                    const note = window.prompt('Enter private note:');
-                    if (note?.trim()) applyBulkAction({ type: 'note', note: note.trim() });
-                  }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
-                >
-                  <StickyNote className="w-4 h-4 text-yellow-500" />
-                  <span>Add private note</span>
-                </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        )) : isVoipCalls ? (
+          // Render VoIP call records (black-accented channel)
+          <>
+            {filteredVoipCalls.map((call) => {
+              const isSelected = selectedCallRecordId === call.id;
+              const caller = voipCallerLabel(call);
+              return (
+                <div key={call.id} className="relative group">
+                <button
+                  onClick={() => {
+                    setSelectedCallRecordId(call.id);
+                    // Most VoIP callers are unsaved numbers with no conversation
+                    // behind them, so the call itself drives the detail pane.
+                    onSelectVoipCall?.(call.id);
+                    const correspondingChat = call.name
+                      ? (allChats || chats).find(c => c.name === call.name)
+                      : undefined;
+                    if (correspondingChat && onSelectCallTranscription) {
+                      onSelectCallTranscription(correspondingChat, call.id);
+                    }
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-[#F4F1ED] ${
+                    isSelected ? 'bg-gray-100' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <VoipAvatar name={call.name} size="sm" />
 
-      {/* Toast notification */}
-      {bulkToast && (
-        <div
-          className={`mx-3 mt-2 mb-1 px-3 py-2 rounded-lg text-sm flex items-center gap-2 shadow-sm ${
-            bulkToast.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-amber-50 border border-amber-200 text-amber-800'
-          }`}
-        >
-          {bulkToast.type === 'success' ? (
-            <Check className="w-4 h-4 text-green-600 shrink-0" />
-          ) : (
-            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-          )}
-          <span>{bulkToast.message}</span>
-        </div>
-      )}
+                  {/* Body */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate min-w-0">
+                          {caller}
+                        </p>
+                        <CallHandlerLabel call={call} />
+                      </div>
+                      <span className="text-xs text-gray-400 shrink-0">{call.time}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-0.5">
+                      <p className={`text-xs truncate ${call.type === 'missed' ? 'text-red-500' : 'text-gray-500'}`}>
+                        {call.status}
+                      </p>
+                      <span className="text-xs text-gray-400 shrink-0">{call.duration}</span>
+                    </div>
+                  </div>
+                </button>
+                {onCallContact && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                    <VoipCallButton
+                      variant="icon"
+                      phoneNumber={call.phoneNumber}
+                      contactName={caller}
+                      onCall={onCallContact}
+                    />
+                  </div>
+                )}
+                </div>
+              );
+            })}
 
-      {/* Chat List */}
-      <div className="flex-1 overflow-y-auto">
-        {filteredChats.map((chat) => {
-          return (
-            <div
-              key={chat.id}
-              className="group relative"
-              onClick={() => onSelectChat(chat)}
-            >
+            {filteredVoipCalls.length === 0 && (
+              <div className="flex items-center justify-center h-32 text-gray-500">
+                <div className="text-center">
+                  <p>No calls found</p>
+                  {searchQuery && (
+                    <p className="text-sm mt-1">Try adjusting your search terms</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          // Render regular chats for other channels
+          <>
+            {filteredChats.map((chat) => (
               <ConversationListUnselected
+                key={chat.id}
                 chat={chat}
                 isSelected={selectedChat.id === chat.id}
-                onClick={undefined}
+                onClick={() => handleChatClick(chat)}
                 selectedChannel={selectedChannel}
               />
-            </div>
-          );
-        })}
-
-        {filteredChats.length === 0 && (
-          <div className="flex items-center justify-center h-32 text-gray-500">
-            <div className="text-center">
-              <p>No conversations found</p>
-              {searchQuery && (
-                <p className="text-sm mt-1">Try adjusting your search terms</p>
-              )}
-            </div>
-          </div>
+            ))}
+            
+            {filteredChats.length === 0 && (
+              <div className="flex items-center justify-center h-32 text-gray-500">
+                <div className="text-center">
+                  <p>No conversations found</p>
+                  {searchQuery && (
+                    <p className="text-sm mt-1">Try adjusting your search terms</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -936,6 +1380,18 @@ export function ChatList({
           isOpen={isCustomFilterOpen}
           onClose={() => setIsCustomFilterOpen(false)}
           onApply={handleCustomFilterApply}
+        />
+      )}
+
+      {/* Call Detail Panel - Only show when NOT viewing contact history inline */}
+      {selectedCallDetail && !viewingContactHistory && (
+        <CallDetailPanel
+          isOpen={true}
+          onClose={() => setSelectedCallDetail(null)}
+          contactName={selectedCallDetail.name}
+          phoneNumber={selectedCallDetail.phoneNumber}
+          avatar={selectedCallDetail.avatar || selectedCallDetail.name.split(' ').map(n => n[0]).join('')}
+          callHistory={CALL_HISTORY_DATA[selectedCallDetail.name] || []}
         />
       )}
     </div>

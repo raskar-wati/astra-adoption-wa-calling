@@ -5,14 +5,12 @@ import Panel from './Panel';
 interface TiTopNavProps {
   onToggleContactInfo?: () => void;
   isContactInfoVisible?: boolean;
-  // Presence is a chat concept — nobody is "Available" for email. Passed down by
-  // context so the generated wrapper components in between stay untouched.
-  showPresence?: boolean;
-  // So is the session countdown: an email thread has no window that expires.
-  showTimer?: boolean;
+  selectedChat?: {
+    id: string;
+    name: string;
+  };
+  onStartCall?: () => void;
 }
-
-const PresenceContext = React.createContext(true);
 
 function Wrapper3({ children }: React.PropsWithChildren<{}>) {
   return (
@@ -107,16 +105,13 @@ function Frame1984077390() {
 }
 
 function Frame1984077389() {
-  const showPresence = React.useContext(PresenceContext);
   return (
     <div className="relative shrink-0">
       <div className="box-border content-stretch flex flex-col items-start justify-start p-0 relative">
         <Frame1984077390 />
-        {showPresence && (
-          <div className="font-['Inter:Regular',_sans-serif] font-normal leading-[0] not-italic relative shrink-0 text-[#848a86] text-[12px] text-left text-nowrap">
-            <p className="block leading-[16px] whitespace-pre">Available</p>
-          </div>
-        )}
+        <div className="font-['Inter:Regular',_sans-serif] font-normal leading-[0] not-italic relative shrink-0 text-[#848a86] text-[12px] text-left text-nowrap">
+          <p className="block leading-[16px] whitespace-pre">Available</p>
+        </div>
       </div>
     </div>
   );
@@ -356,9 +351,39 @@ function CocoLineMore() {
   );
 }
 
-function Menu() {
+function PhoneIcon({ onStartCall }: { onStartCall?: () => void }) {
+  return (
+    <div 
+      className="flex h-[24px] items-center justify-center relative shrink-0 w-[24px] cursor-pointer transition-all duration-200 rounded p-1 hover:bg-gray-50" 
+      data-name="Phone"
+      onClick={onStartCall}
+    >
+      <svg
+        className="w-4 h-4 transition-colors"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        viewBox="0 0 24 24"
+      >
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+      </svg>
+    </div>
+  );
+}
+
+function Menu({ selectedChat, onStartCall }: { selectedChat?: { id: string; name: string }; onStartCall?: () => void }) {
+  const isAddisonSmith = selectedChat?.id === '1';
+  
   return (
     <Wrapper2>
+      {/* Show phone icon only for Addison Smith */}
+      {isAddisonSmith && (
+        <div className="flex h-[20px] items-center justify-center relative shrink-0 w-[21px]">
+          <PhoneIcon onStartCall={onStartCall} />
+        </div>
+      )}
       <div className="flex h-[20px] items-center justify-center relative shrink-0 w-[21px]">
         <div className="flex-none rotate-[270deg]">
           <CocoLineMore />
@@ -390,37 +415,35 @@ function PanelToggleButton({ onToggleContactInfo, isContactInfoVisible }: { onTo
   );
 }
 
-function Frame1984077524({ onToggleContactInfo, isContactInfoVisible }: { onToggleContactInfo?: () => void; isContactInfoVisible?: boolean }) {
+function Frame1984077524({ onToggleContactInfo, isContactInfoVisible, selectedChat, onStartCall }: { onToggleContactInfo?: () => void; isContactInfoVisible?: boolean; selectedChat?: { id: string; name: string }; onStartCall?: () => void }) {
   return (
     <Wrapper1>
       <Dropdown />
-      <Menu />
+      <Menu selectedChat={selectedChat} onStartCall={onStartCall} />
       <PanelToggleButton onToggleContactInfo={onToggleContactInfo} isContactInfoVisible={isContactInfoVisible} />
     </Wrapper1>
   );
 }
 
-function Frame1984077518({ onToggleContactInfo, isContactInfoVisible, showTimer }: { onToggleContactInfo?: () => void; isContactInfoVisible?: boolean; showTimer?: boolean }) {
+function Frame1984077518({ onToggleContactInfo, isContactInfoVisible, selectedChat, onStartCall }: { onToggleContactInfo?: () => void; isContactInfoVisible?: boolean; selectedChat?: { id: string; name: string }; onStartCall?: () => void }) {
   return (
     <Wrapper3>
-      {showTimer && <Timer />}
-      <Frame1984077524 onToggleContactInfo={onToggleContactInfo} isContactInfoVisible={isContactInfoVisible} />
+      <Timer />
+      <Frame1984077524 onToggleContactInfo={onToggleContactInfo} isContactInfoVisible={isContactInfoVisible} selectedChat={selectedChat} onStartCall={onStartCall} />
     </Wrapper3>
   );
 }
 
-export default function TiTopNav({ onToggleContactInfo, isContactInfoVisible, showPresence = true, showTimer = true }: TiTopNavProps = {}) {
+export default function TiTopNav({ onToggleContactInfo, isContactInfoVisible, selectedChat, onStartCall }: TiTopNavProps = {}) {
   return (
-   <PresenceContext.Provider value={showPresence}>
     <div className="bg-[#ffffff] relative size-full" data-name="TI - Top Nav">
       <div className="absolute border-[#e7e9e8] border-[0px_0px_1px] border-solid inset-0 pointer-events-none" />
       <div className="flex flex-row items-center relative size-full">
         <div className="box-border content-stretch flex flex-row items-center justify-between px-4 py-6 relative size-full">
           <Frame1984077521 />
-          <Frame1984077518 onToggleContactInfo={onToggleContactInfo} isContactInfoVisible={isContactInfoVisible} showTimer={showTimer} />
+          <Frame1984077518 onToggleContactInfo={onToggleContactInfo} isContactInfoVisible={isContactInfoVisible} selectedChat={selectedChat} onStartCall={onStartCall} />
         </div>
       </div>
     </div>
-   </PresenceContext.Provider>
   );
 }

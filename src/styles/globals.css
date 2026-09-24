@@ -79,6 +79,18 @@
 }
 
 @theme inline {
+  /* Astra brand — from Astra DSM 2.0. The mark is gradient-filled; these are
+     the flat values for small UI and for the wordmark. */
+  --color-astra-blue: #366BFF;
+  --color-astra-blue-deep: #0034C5;
+  --color-astra-blue-mid: #5875EC;
+  --color-astra-blue-light: #5BAEF7;
+  --color-astra-word: #527BEF;
+  --color-astra-ink: #111111;
+
+  /* Wati Green — brand accent for calls-to-action. */
+  --color-wati-green: #23A455;
+  --color-wati-green-dark: #1C8A46;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -186,4 +198,65 @@
 
 html {
   font-size: var(--font-size);
+}
+
+/* WhatsApp Calling Urgency Animations */
+@layer components {
+  @keyframes phone-pulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+    }
+  }
+
+  @keyframes phone-icon-bounce {
+    0%, 100% {
+      transform: scale(1) rotate(0deg);
+    }
+    25% {
+      transform: scale(1.1) rotate(-2deg);
+    }
+    75% {
+      transform: scale(1.1) rotate(2deg);
+    }
+  }
+
+  @keyframes phone-glow {
+    0%, 100% {
+      box-shadow: 0 0 5px rgba(34, 197, 94, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(34, 197, 94, 0.6), 0 0 25px rgba(34, 197, 94, 0.3);
+    }
+  }
+
+  .whatsapp-calling-button {
+    animation: phone-pulse 2s infinite, phone-glow 1.5s infinite alternate;
+  }
+
+  .whatsapp-calling-icon {
+    animation: phone-icon-bounce 1s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes blink {
+    0%, 20% {
+      opacity: 0;
+    }
+    40%, 100% {
+      opacity: 1;
+    }
+  }
 }

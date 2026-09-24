@@ -5,15 +5,47 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "./utils";
 
+// Filter out Figma-specific props
+const filterFigmaProps = (props: Record<string, any>) => {
+  const { _fgT, _fgt, _fgS, _fgs, _fgB, _fgb, ...rest } = props;
+  return rest;
+};
+
 function Popover({
+  _fgT,
+  _fgt,
+  _fgS,
+  _fgs,
+  _fgB,
+  _fgb,
   ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Root>) {
+}: React.ComponentProps<typeof PopoverPrimitive.Root> & {
+  _fgT?: any;
+  _fgt?: any;
+  _fgS?: any;
+  _fgs?: any;
+  _fgB?: any;
+  _fgb?: any;
+}) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
 function PopoverTrigger({
+  _fgT,
+  _fgt,
+  _fgS,
+  _fgs,
+  _fgB,
+  _fgb,
   ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
+}: React.ComponentProps<typeof PopoverPrimitive.Trigger> & {
+  _fgT?: any;
+  _fgt?: any;
+  _fgS?: any;
+  _fgs?: any;
+  _fgB?: any;
+  _fgb?: any;
+}) {
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
@@ -21,8 +53,21 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  _fgT,
+  _fgt,
+  _fgS,
+  _fgs,
+  _fgB,
+  _fgb,
   ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+}: React.ComponentProps<typeof PopoverPrimitive.Content> & {
+  _fgT?: any;
+  _fgt?: any;
+  _fgS?: any;
+  _fgs?: any;
+  _fgB?: any;
+  _fgb?: any;
+}) {
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
@@ -40,8 +85,21 @@ function PopoverContent({
 }
 
 function PopoverAnchor({
+  _fgT,
+  _fgt,
+  _fgS,
+  _fgs,
+  _fgB,
+  _fgb,
   ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
+}: React.ComponentProps<typeof PopoverPrimitive.Anchor> & {
+  _fgT?: any;
+  _fgt?: any;
+  _fgS?: any;
+  _fgs?: any;
+  _fgB?: any;
+  _fgb?: any;
+}) {
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
 }
 

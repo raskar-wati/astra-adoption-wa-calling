@@ -171,14 +171,14 @@ export function FilterDialog({ isOpen, onClose, onApply }: FilterDialogProps) {
         </div>
 
         {/* Content */}
-        <div className="px-4 sm:px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+        <div className="px-6 py-4 space-y-4">
           {segments.map((segment, index) => (
             <div key={index} className="space-y-3">
               {/* Conditional field layout based on attribute selection */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-3">
                 {segment.attribute === 'attribute' ? (
                   // Show all four fields when "Attribute" is selected
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 flex-1">
+                  <div className="grid grid-cols-4 gap-3 flex-1">
                     <div>
                       <CustomDropdown
                         placeholder="Attribute"
@@ -215,9 +215,9 @@ export function FilterDialog({ isOpen, onClose, onApply }: FilterDialogProps) {
                     </div>
                   </div>
                 ) : (
-                  // Show only two fields when other options are selected - responsive layout
-                  <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                    <div className="w-full sm:w-1/4 min-w-0">
+                  // Show only two fields when other options are selected - first dropdown same width as in grid, second dropdown full width
+                  <div className="flex gap-3 flex-1">
+                    <div className="w-1/4 min-w-0">
                       <CustomDropdown
                         placeholder="Attribute"
                         options={ATTRIBUTE_OPTIONS}
@@ -225,7 +225,7 @@ export function FilterDialog({ isOpen, onClose, onApply }: FilterDialogProps) {
                         onChange={(value) => handleSegmentChange(index, 'attribute', value)}
                       />
                     </div>
-                    <div className="w-full sm:w-3/4 min-w-0">
+                    <div className="w-3/4 min-w-0">
                       <CustomDropdown
                         placeholder={getSecondaryPlaceholder(segment.attribute)}
                         options={getSecondaryOptions(segment.attribute)}
@@ -240,7 +240,7 @@ export function FilterDialog({ isOpen, onClose, onApply }: FilterDialogProps) {
                 {segments.length > 1 && (
                   <button
                     onClick={() => handleDeleteSegment(index)}
-                    className="p-2 sm:p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors flex-shrink-0 self-start sm:self-center"
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors flex-shrink-0"
                     title="Delete segment"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -253,27 +253,27 @@ export function FilterDialog({ isOpen, onClose, onApply }: FilterDialogProps) {
           {/* Add new Segment button */}
           <button
             onClick={handleAddSegment}
-            className="flex items-center space-x-2 text-sm text-green-600 hover:text-green-700 transition-colors py-2"
+            className="flex items-center space-x-2 text-sm text-green-600 hover:text-green-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>Add new Segment</span>
           </button>
 
           {/* Show old chats first checkbox */}
-          <div className="flex items-center space-x-2 pt-2 py-2">
+          <div className="flex items-center space-x-2 pt-2">
             <div 
-              className="w-5 h-5 sm:w-4 sm:h-4 cursor-pointer flex-shrink-0"
+              className="w-4 h-4 cursor-pointer"
               onClick={() => setShowOldChatsFirst(!showOldChatsFirst)}
             >
               {showOldChatsFirst ? (
                 <Checkbox />
               ) : (
-                <div className="w-5 h-5 sm:w-4 sm:h-4 border border-gray-300 rounded bg-white" />
+                <div className="w-4 h-4 border border-gray-300 rounded bg-white" />
               )}
             </div>
             <label 
               htmlFor="showOldChats" 
-              className="text-sm text-gray-700 cursor-pointer select-none"
+              className="text-sm text-gray-700 cursor-pointer"
               onClick={() => setShowOldChatsFirst(!showOldChatsFirst)}
             >
               Show old chats first
@@ -282,20 +282,20 @@ export function FilterDialog({ isOpen, onClose, onApply }: FilterDialogProps) {
 
           {/* Save as custom filter checkbox */}
           <div className="flex flex-col space-y-2 pt-2">
-            <div className="flex items-center space-x-2 py-2">
+            <div className="flex items-center space-x-2">
               <div 
-                className="w-5 h-5 sm:w-4 sm:h-4 cursor-pointer flex-shrink-0"
+                className="w-4 h-4 cursor-pointer"
                 onClick={() => setSaveAsCustomFilter(!saveAsCustomFilter)}
               >
                 {saveAsCustomFilter ? (
                   <Checkbox />
                 ) : (
-                  <div className="w-5 h-5 sm:w-4 sm:h-4 border border-gray-300 rounded bg-white" />
+                  <div className="w-4 h-4 border border-gray-300 rounded bg-white" />
                 )}
               </div>
               <label 
                 htmlFor="saveCustomFilter" 
-                className="text-sm text-gray-700 cursor-pointer select-none"
+                className="text-sm text-gray-700 cursor-pointer"
                 onClick={() => setSaveAsCustomFilter(!saveAsCustomFilter)}
               >
                 Save this as custom filter
@@ -304,7 +304,7 @@ export function FilterDialog({ isOpen, onClose, onApply }: FilterDialogProps) {
             
             {/* Custom filter name input - only show when checkbox is checked */}
             {saveAsCustomFilter && (
-              <div className="ml-6 sm:ml-6">
+              <div className="ml-6">
                 <CustomInput
                   placeholder="Enter filter name"
                   value={customFilterName}

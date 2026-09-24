@@ -10,7 +10,6 @@ interface ContactInfoProps {
     displayName: string;
     username: string;
     source: string;
-    emailAddress?: string;
     attributes: {
       [key: string]: any;
     };
@@ -563,42 +562,6 @@ function ContactDetailsInfoSection({ phoneNumber }: { phoneNumber: string }) {
   );
 }
 
-function ContactDetailsInfoSectionEmailText({ emailAddress }: { emailAddress: string }) {
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(emailAddress);
-  };
-
-  return (
-    <div className="flex items-center gap-1 flex-1 min-w-0">
-      <div className="leading-[0] relative flex-1 min-w-0 text-foreground break-words">
-        <p>{emailAddress}</p>
-      </div>
-      <Button onCopy={copyToClipboard} />
-    </div>
-  );
-}
-
-function ParameterEmail({ emailAddress }: { emailAddress: string }) {
-  return (
-    <BackgroundImage108>
-      <BackgroundImageAndText1 text="Email address" />
-      <ContactDetailsInfoSectionEmailText emailAddress={emailAddress} />
-    </BackgroundImage108>
-  );
-}
-
-function ContactDetailsInfoSectionEmail({ emailAddress }: { emailAddress: string }) {
-  return (
-    <BackgroundImage162>
-      <BackgroundImage162>
-        <BackgroundImage162>
-          <ParameterEmail emailAddress={emailAddress} />
-        </BackgroundImage162>
-      </BackgroundImage162>
-    </BackgroundImage162>
-  );
-}
-
 function Parameter1({ displayName }: { displayName: string }) {
   return (
     <BackgroundImage108>
@@ -665,18 +628,11 @@ function ContactDetailsInfoSection3({ username }: { username: string }) {
   );
 }
 
-// Source arrives as a raw enum (customer_initiated_chat_email). Agents shouldn't
-// have to read snake_case, so present it as a sentence.
-function humanizeSource(source: string): string {
-  const pretty = source.replace(/_/g, ' ').trim();
-  return pretty.charAt(0).toUpperCase() + pretty.slice(1);
-}
-
 function ContactDetailsInfoSectionText16({ source }: { source: string }) {
   return (
     <BackgroundImage251 additionalClassNames={["flex-1", "min-w-0"]}>
       <BackgroundImageAndText3
-        text={humanizeSource(source)}
+        text={source}
         additionalClassNames={["gap-1", "w-full"]}
       />
     </BackgroundImage251>
@@ -730,9 +686,6 @@ function ContactDetailsInfo({
       <ContactDetailsInfoHeader isExpanded={isExpanded} onToggle={onToggle} />
       {isExpanded && (
         <>
-          {contact.emailAddress && (
-            <ContactDetailsInfoSectionEmail emailAddress={contact.emailAddress} />
-          )}
           <ContactDetailsInfoSection phoneNumber={contact.phoneNumber} />
           <ContactDetailsInfoSection2 displayName={contact.displayName} />
           <ContactDetailsInfoSection3 username={contact.username} />
@@ -1099,6 +1052,8 @@ export function ContactInfo({ contact, onClose, isMobile = false }: ContactInfoP
       <div className="relative size-full">
         <div className="box-border content-stretch flex flex-col gap-4 items-start justify-start px-4 py-3 relative size-full">
           <ContactDetailsHeader name={contact.name} />
+          <ContactDetailsPanelLineBackgroundImage />
+          
           <ContactDetailsPanelLineBackgroundImage />
           <ContactDetailsInfoContainer 
             contact={contact} 

@@ -138,10 +138,21 @@ export function ChannelPopover({
   const selectedCount = selectedAccounts.length;
   const colors = channelColors[channelType];
 
+  // Filter Figma props from children
+  const cleanChildren = React.isValidElement(children)
+    ? React.cloneElement(children, {
+        ...Object.fromEntries(
+          Object.entries(children.props).filter(
+            ([key]) => !['_fgT', '_fgt', '_fgS', '_fgs', '_fgB', '_fgb'].includes(key)
+          )
+        )
+      })
+    : children;
+
   return (
     <Popover open={isOpen} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        {children}
+        {cleanChildren}
       </PopoverTrigger>
       <PopoverContent 
         className="w-80 p-0" 

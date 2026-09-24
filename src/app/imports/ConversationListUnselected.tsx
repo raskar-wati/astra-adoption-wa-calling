@@ -4,9 +4,6 @@ import clsx from "clsx";
 import Container1 from "./Container";
 import MessengerContainer from "./Container-4033-259";
 import SMSContainer from "./Container-4050-541";
-import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { AVATAR_PHOTOS } from "../components/avatarPhotos";
-import { useHasDraft } from "../lib/emailDrafts";
 
 interface ConversationProps {
   chat: {
@@ -14,8 +11,6 @@ interface ConversationProps {
     name: string;
     avatar: string;
     lastMessage: string;
-    subject?: string;
-    preview?: string;
     timestamp: string;
     status: string;
     channel: string;
@@ -60,7 +55,7 @@ function Wrapper({
   );
 }
 
-function ConversationAvatar({ selectedChannel, chatName }: { selectedChannel?: string; chatName?: string }) {
+function ConversationAvatar({ selectedChannel }: { selectedChannel?: string }) {
   // For Instagram conversations, use the Instagram avatar
   if (selectedChannel === 'Instagram') {
     return (
@@ -84,36 +79,6 @@ function ConversationAvatar({ selectedChannel, chatName }: { selectedChannel?: s
     return (
       <div className="relative shrink-0 size-8" data-name="Avatars">
         <SMSContainer />
-      </div>
-    );
-  }
-
-  // For Email conversations, use the contact's portrait photo (falls back to an indigo email avatar)
-  if (selectedChannel === 'Email') {
-    const photo = chatName ? AVATAR_PHOTOS[chatName] : undefined;
-    return (
-      <div className="relative shrink-0 size-8" data-name="Avatars">
-        {photo ? (
-          <ImageWithFallback
-            src={photo}
-            alt={chatName || 'Contact'}
-            className="rounded-full size-8 object-cover"
-          />
-        ) : (
-          <div className="flex items-center justify-center rounded-full size-8 bg-indigo-100">
-            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="#5B6CFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="4" width="20" height="16" rx="2" />
-              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-            </svg>
-          </div>
-        )}
-        {/* Channel badge */}
-        <div className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full size-3.5 bg-[#5B6CFF] border-2 border-white">
-          <svg className="size-2" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="4" width="20" height="16" rx="2" />
-            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-          </svg>
-        </div>
       </div>
     );
   }
@@ -253,19 +218,7 @@ function ChatItemName({ name, agentName }: { name: string; agentName: string }) 
   );
 }
 
-function MessagePreview({
-  message,
-  name,
-  subject,
-  preview,
-  hasDraft,
-}: {
-  message: string;
-  name: string;
-  subject?: string;
-  preview?: string;
-  hasDraft?: boolean;
-}) {
+function MessagePreview({ message, name }: { message: string; name: string }) {
   return (
     <div className="relative shrink-0 w-full">
       <div className="box-border content-stretch flex flex-col gap-0.5 items-start justify-start p-0 relative w-full">
@@ -276,18 +229,7 @@ function MessagePreview({
         </div>
         <div className="font-['Inter:Regular',_sans-serif] font-normal leading-[0] not-italic overflow-ellipsis overflow-hidden relative shrink-0 text-[#333333] text-[14px] text-left text-nowrap w-full">
           <p className="block leading-[20px] text-[12px] truncate">
-            {hasDraft && <span className="text-[#5B6CFF] font-semibold">Draft · </span>}
-            {subject ? (
-              // Email: the subject carries the triage weight, the snippet trails
-              // behind it in grey. Keeping them visually distinct matters because
-              // subjects can themselves contain the dash used as a separator.
-              <>
-                <span className="text-[#333333]">{subject}</span>
-                {preview && <span className="text-gray-400"> — {preview}</span>}
-              </>
-            ) : (
-              message
-            )}
+            {message}
           </p>
         </div>
       </div>
@@ -414,8 +356,8 @@ function BackArrowIcon() {
 }
 
 function ChannelFooter({ category, selectedChannel }: { category: string; selectedChannel?: string }) {
-  // Hide for Instagram, Messenger, SMS, RCS, and Email - only show for WhatsApp
-  if (selectedChannel === 'Instagram' || selectedChannel === 'Messenger' || selectedChannel === 'SMS' || selectedChannel === 'RCS' || selectedChannel === 'Email') {
+  // Hide for Instagram, Messenger, SMS, and RCS - only show for WhatsApp
+  if (selectedChannel === 'Instagram' || selectedChannel === 'Messenger' || selectedChannel === 'SMS' || selectedChannel === 'RCS') {
     return null;
   }
 
@@ -430,17 +372,10 @@ function ChannelFooter({ category, selectedChannel }: { category: string; select
 }
 
 function ChatDetails({ chat, selectedChannel }: { chat: ConversationProps['chat']; selectedChannel?: string }) {
-  const hasDraft = useHasDraft(chat.id);
   return (
     <div className="basis-0 grow min-h-px min-w-px relative shrink-0">
       <div className="box-border content-stretch flex flex-col gap-1.5 items-start justify-start p-0 relative w-full">
-        <MessagePreview
-          message={chat.lastMessage}
-          name={chat.name}
-          subject={chat.subject}
-          preview={chat.preview}
-          hasDraft={hasDraft}
-        />
+        <MessagePreview message={chat.lastMessage} name={chat.name} />
         <TimeAndStatus status={chat.status} timestamp={chat.timestamp} />
         <ChannelFooter category={chat.category} selectedChannel={selectedChannel} />
       </div>
@@ -464,7 +399,7 @@ export default function ConversationListUnselected({ chat, isSelected, onClick, 
     >
       <div className="relative size-full">
         <div className="box-border content-stretch flex flex-row gap-2 items-start justify-start p-[12px] relative size-full">
-          <ConversationAvatar selectedChannel={selectedChannel} chatName={chat.name} />
+          <ConversationAvatar selectedChannel={selectedChannel} />
           <ChatDetails chat={chat} selectedChannel={selectedChannel} />
         </div>
       </div>

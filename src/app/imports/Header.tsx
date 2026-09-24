@@ -628,9 +628,9 @@ function HeaderContainer() {
 export default function Header() {
   return (
     <div className="relative w-full h-full" data-name="Header">
-      <div className="absolute border border-[#e7e9e8] border-solid inset-[-1px] pointer-events-none" />
+      <div className="absolute border border-[#e7e9e8] border-solid inset-[-1px] pointer-events-none hidden" />
       <div
-        className="absolute bg-[#ffffff] h-full left-0 top-0 w-full"
+        className="absolute bg-[#ffffff] h-full left-0 top-0 w-full hidden"
         data-name="Hover Option Background"
       />
       <HeaderContainer />

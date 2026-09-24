@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { ChevronDown, ChevronRight, Settings, Phone, Instagram, Send, Inbox, X, MessageSquare, Pin, Mail } from 'lucide-react';
+import { ChevronDown, ChevronRight, Settings, Phone, Instagram, Send, Inbox, X, MessageSquare, ClipboardList, Plus, Waypoints, PhoneOutgoing } from 'lucide-react';
 import { ChannelPopover } from './ChannelPopover';
+
+
 
 // Custom WhatsApp Icon Component
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -35,14 +37,18 @@ interface SidebarProps {
   chatCounts: {
     all: number;
     whatsapp: number;
+    whatsappCalling: number;
+    voip: number;
     instagram: number;
     messenger: number;
     sms: number;
     rcs: number;
-    email: number;
   };
   customFilters: CustomFilter[];
   onCustomFilterDelete: (filterId: string) => void;
+  onSettingsClick?: () => void;
+  onOpenScorecardBuilder?: () => void;
+  onOpenVoipDialer?: () => void;
 }
 
 export function Sidebar({ 
@@ -53,7 +59,10 @@ export function Sidebar({
   isCollapsed,
   chatCounts,
   customFilters,
-  onCustomFilterDelete
+  onCustomFilterDelete,
+  onSettingsClick,
+  onOpenScorecardBuilder,
+  onOpenVoipDialer,
 }: SidebarProps) {
   // Channel-specific popover states
   const [isWhatsAppPopoverOpen, setIsWhatsAppPopoverOpen] = useState(false);
@@ -71,16 +80,15 @@ export function Sidebar({
   
   // Track which filter sections are expanded
   const [expandedSections, setExpandedSections] = useState<string[]>(['channels']);
-  const [isMoreFiltersExpanded, setIsMoreFiltersExpanded] = useState(false);
-  const [pinnedFilters, setPinnedFilters] = useState<string[]>([]);
-  
+
   const channels = [
     { name: 'All Channels', count: chatCounts.all, icon: Inbox },
     { name: 'WhatsApp', count: chatCounts.whatsapp, icon: WhatsAppIcon },
+    { name: 'WhatsApp Calls', count: chatCounts.whatsappCalling, icon: Phone },
+    { name: 'VoIP', count: chatCounts.voip, icon: Waypoints },
     { name: 'Instagram', count: chatCounts.instagram, icon: Instagram },
     { name: 'Messenger', count: chatCounts.messenger, icon: MessengerIcon },
-    { name: 'RCS', count: chatCounts.rcs, icon: MessageSquare },
-    { name: 'Email', count: chatCounts.email, icon: Mail }
+    { name: 'RCS', count: chatCounts.rcs, icon: MessageSquare }
   ];
 
   // Critical filters that should always be visible - Updated with requested filters
@@ -92,40 +100,29 @@ export function Sidebar({
     { name: 'Favourites', count: 1 }
   ];
 
-  // Organized filter groups - Removed Solved, Support, and Sales from Chat Type
-  const filterGroups = [
-    {
-      id: 'time-based',
-      title: 'Time-based',
-      filters: [
-        { name: 'Last 24 hours', count: 6 },
-        { name: 'Expiring Soon', count: 3, warning: true },
-        { name: 'Expired', count: 0, warning: true }
-      ]
-    },
-    {
-      id: 'chat-type',
-      title: 'Chat Type',
-      filters: [
-        { name: 'Broadcasts', count: 2 },
-        { name: 'CTWA', count: 2 },
-        { name: 'G-CTWA', count: 12 },
-        { name: 'AI Support Agent Chats', count: 42 }
-      ]
-    },
-    {
-      id: 'custom-filters',
-      title: 'Custom Filters',
-      filters: [
-        // Only show custom filters created by users
-        ...customFilters.map(filter => ({
-          id: filter.id,
-          name: filter.name,
-          count: 0, // Could be calculated based on actual filter logic
-          custom: true
-        }))
-      ]
-    }
+  // WhatsApp Calls specific filters
+  const whatsAppCallsFilters = [
+    { name: 'All Calls', count: 5 },
+    { name: 'Requests Accepted', count: 3 },
+    { name: 'Callback Queue', count: 2 }
+  ];
+
+  // All additional filters combined under "More"
+  const moreFilters = [
+    { name: 'Last 24 hours', count: 6 },
+    { name: 'Expiring Soon', count: 3, warning: true },
+    { name: 'Expired', count: 0, warning: true },
+    { name: 'Broadcasts', count: 2 },
+    { name: 'CTWA', count: 2 },
+    { name: 'G-CTWA', count: 12 },
+    { name: 'AI Support Agent Chats', count: 42 },
+    // Custom filters will be added dynamically
+    ...customFilters.map(filter => ({
+      id: filter.id,
+      name: filter.name,
+      count: 0,
+      custom: true
+    }))
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -144,16 +141,6 @@ export function Sidebar({
   const handleFilterClick = (filterName: string) => {
     console.log(`🎯 Sidebar: Filter clicked: "${filterName}"`);
     setSelectedFilter(filterName);
-  };
-
-  const handlePinFilter = (filterName: string) => {
-    setPinnedFilters(prev => {
-      if (prev.includes(filterName)) {
-        return prev.filter(name => name !== filterName);
-      } else {
-        return [...prev, filterName];
-      }
-    });
   };
 
   const handleWhatsAppAccountsChange = (accounts: string[]) => {
@@ -190,6 +177,8 @@ export function Sidebar({
       setSelectedChannel('RCS');
     }
   };
+
+
 
   const getChannelDisplayCount = (channelName: string) => {
     switch (channelName) {
@@ -250,6 +239,10 @@ export function Sidebar({
     switch (channelName) {
       case 'WhatsApp':
         return 'text-green-500';
+      case 'WhatsApp Calls':
+        return 'text-green-500';
+      case 'VoIP':
+        return 'text-gray-900';
       case 'Instagram':
         return 'text-purple-500';
       case 'Messenger':
@@ -258,8 +251,6 @@ export function Sidebar({
         return 'text-orange-500';
       case 'RCS':
         return 'text-orange-500';
-      case 'Email':
-        return 'text-indigo-500';
       case 'All Channels':
         return 'text-blue-600';
       default:
@@ -273,6 +264,10 @@ export function Sidebar({
     switch (channelName) {
       case 'WhatsApp':
         return 'bg-green-50 text-green-700';
+      case 'WhatsApp Calls':
+        return 'bg-green-50 text-green-700';
+      case 'VoIP':
+        return 'bg-gray-100 text-gray-900';
       case 'Instagram':
         return 'bg-purple-50 text-purple-700';
       case 'Messenger':
@@ -281,8 +276,6 @@ export function Sidebar({
         return 'bg-orange-50 text-orange-700';
       case 'RCS':
         return 'bg-orange-50 text-orange-700';
-      case 'Email':
-        return 'bg-indigo-50 text-indigo-700';
       case 'All Channels':
         return 'bg-blue-50 text-blue-700';
       default:
@@ -292,6 +285,8 @@ export function Sidebar({
 
   const renderChannelButton = (channel: { name: string; count: number; icon: any }) => {
     const hasAccountSelection = ['WhatsApp', 'Instagram', 'Messenger'].includes(channel.name);
+    const isWhatsAppCalls = channel.name === 'WhatsApp Calls';
+    const isSimpleCallChannel = isWhatsAppCalls || channel.name === 'VoIP';
     const isSelected = selectedChannel === channel.name;
     const IconComponent = channel.icon;
     
@@ -390,7 +385,29 @@ export function Sidebar({
       );
     }
 
-    // Regular channel buttons (All, SMS, RCS)
+    // WhatsApp Calls / VoIP - simple channel button
+    if (isSimpleCallChannel) {
+      return (
+        <div key={channel.name}>
+          <button
+            onClick={() => handleChannelClick(channel.name)}
+            className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors ${getChannelBackgroundColor(channel.name, isSelected)}`}
+          >
+            <span className="flex items-center">
+              <IconComponent className={`w-4 h-4 mr-3 transition-colors ${getChannelIconColor(channel.name, isSelected)}`} />
+              <span className={`transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+                {channel.name}
+              </span>
+            </span>
+            <Badge variant="secondary" className={`text-xs w-6 h-5 flex items-center justify-center transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+              {channel.count}
+            </Badge>
+          </button>
+        </div>
+      );
+    }
+
+    // Regular channel buttons (All, RCS)
     return (
       <div key={channel.name}>
         <button
@@ -411,106 +428,14 @@ export function Sidebar({
     );
   };
 
-  const renderFilterGroup = (group: typeof filterGroups[0]) => {
-    const isExpanded = expandedSections.includes(group.id) && !isCollapsed;
-    const ChevronIcon = isExpanded ? ChevronDown : ChevronRight;
-
-    return (
-      <div key={group.id} className="border-b border-gray-100 last:border-b-0">
-        {/* Group Header */}
-        <button
-          onClick={() => !isCollapsed && toggleSection(group.id)}
-          className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
-          disabled={isCollapsed}
-        >
-          <div className="flex items-center">
-            <ChevronIcon className={`w-4 h-4 text-gray-400 mr-2 transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`} />
-            <span className={`text-sm text-gray-600 font-medium transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-              {group.title}
-            </span>
-          </div>
-
-        </button>
-
-        {/* Group Filters */}
-        {isExpanded && (
-          <div className="pb-2 px-3 overflow-hidden">
-            <div className="space-y-1">
-              {group.filters.length === 0 && group.id === 'custom-filters' ? (
-                <div className="p-2 text-sm text-gray-500 text-center">
-                  No custom filters yet.
-                  <br />
-                  <span className="text-xs">Create one using the filter dialog.</span>
-                </div>
-              ) : (
-                group.filters.map((filter) => (
-                  <div
-                    key={filter.name}
-                    className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors group ${
-                      selectedFilter === filter.name
-                        ? 'bg-green-50 text-green-700'
-                        : 'hover:bg-gray-50 text-gray-700'
-                    }`}
-                  >
-                    <button
-                      onClick={() => handleFilterClick(filter.name)}
-                      className="flex items-center flex-1 min-w-0"
-                    >
-                      <span className="transition-opacity duration-300 flex items-center">
-                        {filter.name}
-                      </span>
-                    </button>
-                    
-                    {(filter as any).custom && (filter as any).id ? (
-                      /* Custom filter with animated counter and delete button */
-                      <div className="relative flex items-center">
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs w-6 h-5 flex items-center justify-center transition-transform duration-200 group-hover:-translate-x-[16px]"
-                        >
-                          {filter.count.toString().padStart(2, '0')}
-                        </Badge>
-                        
-                        {/* Delete button appears in the space */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Are you sure you want to delete the custom filter "${filter.name}"?`)) {
-                              onCustomFilterDelete((filter as any).id);
-                            }
-                          }}
-                          className="absolute right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-0.5 hover:bg-red-100 rounded text-red-500 hover:text-red-700"
-                          title="Delete custom filter"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      /* Regular filter with static counter */
-                      <Badge variant="secondary" className="text-xs w-6 h-5 flex items-center justify-center">
-                        {filter.count.toString().padStart(2, '0')}
-                      </Badge>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
-    <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${
-      isCollapsed ? 'w-0 min-w-0' : 'w-64 min-w-64'
-    }`}>
+    <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'w-0 min-w-0' : 'w-64 min-w-64'}`}>
       <div className={`transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold whitespace-nowrap">Team Inbox</h2>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={onSettingsClick}>
               <Settings className="w-4 h-4" />
             </Button>
           </div>
@@ -542,187 +467,187 @@ export function Sidebar({
           )}
         </div>
 
-        {/* Critical Filters - Always Visible */}
-        <div className="border-b border-gray-200 px-4 py-3">
-          <div className="space-y-1">
-            {criticalFilters.map((filter) => (
-              <button
-                key={filter.name}
-                onClick={() => handleFilterClick(filter.name)}
-                className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors ${
-                  selectedFilter === filter.name
-                    ? 'bg-green-50 text-green-700'
-                    : 'hover:bg-gray-50 text-gray-700'
-                }`}
-              >
-                <span className="whitespace-nowrap">{filter.name}</span>
-                <Badge variant="secondary" className="text-xs w-6 h-5 flex items-center justify-center">
-                  {filter.count.toString().padStart(2, '0')}
-                </Badge>
-              </button>
-            ))}
-            
-            {/* Pinned Filters */}
-            {pinnedFilters.map((filterName) => {
-              const filter = filterGroups.flatMap(g => g.filters).find(f => f.name === filterName);
-              if (!filter) return null;
-              
-              return (
-                <div
+        {/* Critical Filters - Hidden for call channels */}
+        {selectedChannel !== 'WhatsApp Calls' && selectedChannel !== 'VoIP' && (
+          <div className="border-b border-gray-200 px-4 py-3">
+            <div className="space-y-1">
+              {criticalFilters.map((filter) => (
+                <button
                   key={filter.name}
-                  className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors group ${
+                  onClick={() => handleFilterClick(filter.name)}
+                  className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors ${
                     selectedFilter === filter.name
                       ? 'bg-green-50 text-green-700'
                       : 'hover:bg-gray-50 text-gray-700'
                   }`}
                 >
-                  <button
-                    onClick={() => handleFilterClick(filter.name)}
-                    className="flex items-center flex-1 min-w-0"
-                  >
-                    <span className="whitespace-nowrap">{filter.name}</span>
-                  </button>
-                  
-                  <div className="relative flex items-center">
-                    <Badge 
-                      variant="secondary" 
-                      className="text-xs w-6 h-5 flex items-center justify-center transition-transform duration-200 group-hover:-translate-x-[20px]"
-                    >
-                      {filter.count.toString().padStart(2, '0')}
-                    </Badge>
-                    
-                    {/* Unpin button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePinFilter(filter.name);
-                      }}
-                      className="absolute right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-0.5 hover:bg-gray-200 rounded"
-                      title="Unpin filter"
-                    >
-                      <Pin className="w-3 h-3 text-gray-600 fill-current" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Filter Groups */}
-        <div className="flex-1 overflow-y-auto">
-          {/* More/Less Button */}
-          <button
-            onClick={() => !isCollapsed && setIsMoreFiltersExpanded(!isMoreFiltersExpanded)}
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100"
-            disabled={isCollapsed}
-          >
-            <span className={`text-sm text-gray-600 transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-              {isMoreFiltersExpanded ? 'Less' : 'More'}
-            </span>
-            {isMoreFiltersExpanded ? (
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`} />
-            ) : (
-              <ChevronRight className={`w-4 h-4 text-gray-400 transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`} />
-            )}
-          </button>
-
-          {/* All Filter Groups - Shown when expanded */}
-          {isMoreFiltersExpanded && (
-            <div className="px-4 pb-3">
-              <div className="space-y-1">
-                {filterGroups.flatMap((group) => group.filters)
-                  .filter(filter => !pinnedFilters.includes(filter.name))
-                  .map((filter) => (
-                  <div
-                    key={filter.name}
-                    className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors group ${
-                      selectedFilter === filter.name
-                        ? 'bg-green-50 text-green-700'
-                        : 'hover:bg-gray-50 text-gray-700'
-                    }`}
-                  >
-                    <button
-                      onClick={() => handleFilterClick(filter.name)}
-                      className="flex items-center flex-1 min-w-0"
-                    >
-                      <span className="transition-opacity duration-300 flex items-center">
-                        {filter.name}
-                      </span>
-                    </button>
-                    
-                    {(filter as any).custom && (filter as any).id ? (
-                      /* Custom filter with animated counter, pin button and delete button */
-                      <div className="relative flex items-center">
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs w-6 h-5 flex items-center justify-center transition-transform duration-200 group-hover:-translate-x-[36px]"
-                        >
-                          {filter.count.toString().padStart(2, '0')}
-                        </Badge>
-                        
-                        {/* Pin button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePinFilter(filter.name);
-                          }}
-                          className="absolute right-[20px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-0.5 hover:bg-gray-200 rounded"
-                          title="Pin filter"
-                        >
-                          <Pin className="w-3 h-3 text-gray-600" />
-                        </button>
-                        
-                        {/* Delete button appears in the space */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Are you sure you want to delete the custom filter "${filter.name}"?`)) {
-                              onCustomFilterDelete((filter as any).id);
-                            }
-                          }}
-                          className="absolute right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-0.5 hover:bg-red-100 rounded text-red-500 hover:text-red-700"
-                          title="Delete custom filter"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      /* Regular filter with counter and pin button */
-                      <div className="relative flex items-center">
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs w-6 h-5 flex items-center justify-center transition-transform duration-200 group-hover:-translate-x-[20px]"
-                        >
-                          {filter.count.toString().padStart(2, '0')}
-                        </Badge>
-                        
-                        {/* Pin button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePinFilter(filter.name);
-                          }}
-                          className="absolute right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-0.5 hover:bg-gray-200 rounded"
-                          title="Pin filter"
-                        >
-                          <Pin className="w-3 h-3 text-gray-600" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                
-                {/* Show empty message if no filters */}
-                {filterGroups.flatMap((group) => group.filters).filter(filter => !pinnedFilters.includes(filter.name)).length === 0 && (
-                  <div className="p-2 text-sm text-gray-500 text-center">
-                    No additional filters available.
-                  </div>
-                )}
-              </div>
+                  <span className="whitespace-nowrap">{filter.name}</span>
+                  <Badge variant="secondary" className="text-xs w-6 h-5 flex items-center justify-center">
+                    {filter.count.toString().padStart(2, '0')}
+                  </Badge>
+                </button>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* WhatsApp Calls Filters - Shown only for WhatsApp Calls */}
+        {selectedChannel === 'WhatsApp Calls' && (
+          <div className="border-b border-gray-200 px-4 py-3">
+            <div className="space-y-1">
+              {whatsAppCallsFilters.map((filter) => (
+                <button
+                  key={filter.name}
+                  onClick={() => handleFilterClick(filter.name)}
+                  className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors ${
+                    selectedFilter === filter.name
+                      ? 'bg-green-50 text-green-700'
+                      : 'hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <span className="whitespace-nowrap">{filter.name}</span>
+                  <Badge variant="secondary" className="text-xs w-6 h-5 flex items-center justify-center">
+                    {filter.count.toString().padStart(2, '0')}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+
+            {/* QA Scorecards section */}
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium uppercase tracking-wide">
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  QA Scorecards
+                </div>
+                <button
+                  onClick={onOpenScorecardBuilder}
+                  className="flex items-center gap-0.5 text-xs text-primary hover:bg-green-50 px-1.5 py-1 rounded-md transition-colors"
+                  title="New scorecard"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  New
+                </button>
+              </div>
+              <button
+                onClick={onOpenScorecardBuilder}
+                className="w-full flex items-center justify-between p-2 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                <span className="whitespace-nowrap text-xs">Sales Quality — Q2</span>
+                <span className="text-xs bg-green-50 text-green-700 px-1.5 py-0.5 rounded-full">Active</span>
+              </button>
+              <button
+                onClick={onOpenScorecardBuilder}
+                className="w-full flex items-center justify-between p-2 rounded-md text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                <span className="whitespace-nowrap text-xs">Support CSAT Audit</span>
+                <span className="text-xs bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full">Paused</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* VoIP Section - Shown only for VoIP */}
+        {selectedChannel === 'VoIP' && (
+          <div className="border-b border-gray-200 px-4 py-3">
+            <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-500 font-medium uppercase tracking-wide">
+              <Waypoints className="w-3.5 h-3.5 text-gray-900" />
+              VoIP Calling
+            </div>
+
+            <button
+              onClick={onOpenVoipDialer}
+              className="w-full flex items-center justify-center gap-2 p-2.5 rounded-md text-sm font-medium bg-white border border-wati-green text-wati-green hover:bg-wati-green/5 transition-colors"
+            >
+              <PhoneOutgoing className="w-4 h-4" />
+              New call
+            </button>
+          </div>
+        )}
+
+        {/* More Filters Section - Hidden for call channels */}
+        {selectedChannel !== 'WhatsApp Calls' && selectedChannel !== 'VoIP' && (
+          <div className="border-b border-gray-200">
+            <button
+              onClick={() => toggleSection('more')}
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center">
+                {expandedSections.includes('more') ? (
+                  <ChevronDown className="w-4 h-4 text-gray-400 mr-2" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-gray-400 mr-2" />
+                )}
+                <span className="text-sm text-gray-600 font-medium whitespace-nowrap">
+                  {expandedSections.includes('more') ? 'Less' : 'More'}
+                </span>
+              </div>
+            </button>
+            
+            {expandedSections.includes('more') && (
+              <div className="px-4 pb-4">
+                <div className="space-y-1">
+                  {moreFilters.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500 text-center">
+                      No additional filters.
+                    </div>
+                  ) : (
+                    moreFilters.map((filter) => (
+                      <div
+                        key={filter.name}
+                        className={`w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors group ${
+                          selectedFilter === filter.name
+                            ? 'bg-green-50 text-green-700'
+                            : 'hover:bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        <button
+                          onClick={() => handleFilterClick(filter.name)}
+                          className="flex items-center flex-1 min-w-0"
+                        >
+                          <span className="transition-opacity duration-300 flex items-center">
+                            {filter.name}
+                          </span>
+                        </button>
+                        
+                        {(filter as any).custom && (filter as any).id ? (
+                          /* Custom filter with animated counter and delete button */
+                          <div className="relative flex items-center">
+                            <Badge 
+                              variant="secondary" 
+                              className="text-xs w-6 h-5 flex items-center justify-center transition-transform duration-200 group-hover:-translate-x-[16px]"
+                            >
+                              {filter.count.toString().padStart(2, '0')}
+                            </Badge>
+                            
+                            {/* Delete button appears in the space */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`Are you sure you want to delete the custom filter "${filter.name}"?`)) {
+                                  onCustomFilterDelete((filter as any).id);
+                                }
+                              }}
+                              className="absolute right-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-0.5 hover:bg-red-100 rounded text-red-500 hover:text-red-700"
+                              title="Delete custom filter"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          /* Regular filter with static counter */
+                          <Badge variant="secondary" className="text-xs w-6 h-5 flex items-center justify-center">
+                            {filter.count.toString().padStart(2, '0')}
+                          </Badge>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

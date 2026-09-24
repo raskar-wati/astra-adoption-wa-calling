@@ -1,11 +1,11 @@
 
-  # Team Inbox - Email
+  # VoIP Channel
 
-  This is a code bundle for Team Inbox - Email. The original project is available at https://www.figma.com/design/MDcLoob4CGnO5rl0V5VBYD/Team-Inbox---Email.
+  This is a code bundle for VoIP Channel. The original project is available at https://www.figma.com/design/xV4Qzyuxulf6a4tLCowpRH/VoIP-Channel.
 
   ## Running the code
 
   Run `npm i` to install the dependencies.
 
   Run `npm run dev` to start the development server.
-  # email-channel
+  
