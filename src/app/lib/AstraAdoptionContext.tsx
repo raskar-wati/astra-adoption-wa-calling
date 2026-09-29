@@ -1,6 +1,9 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import {
+  AdoptionIteration,
+  AstraSource,
   AstraStatus,
+  PinnedSurface,
   NudgeHistory,
   NudgeTrigger,
   RoutingMode,
@@ -28,6 +31,11 @@ export interface AstraEvent {
 }
 
 interface AstraAdoptionValue {
+  iteration: AdoptionIteration;
+  setIteration: (i: AdoptionIteration) => void;
+  /** Bumped each time the iteration 3 morning brief should play. */
+  morningBriefRun: number;
+  replayMorningBrief: () => void;
   segment: WorkspaceSegment;
   status: AstraStatus;
   routingMode: RoutingMode;
@@ -59,11 +67,26 @@ interface AstraAdoptionValue {
   starHighlight: boolean;
   /** Demo entry point: go to where a surface lives, then show it. */
   showSurface: (trigger: NudgeTrigger) => void;
+  /** Demo entry point: land on the call log without opening anything. */
+  showCallLog: () => void;
 
   /** Hands off to Astra; in the prototype this advances to the free trial. */
-  startAstraTrial: (trigger: NudgeTrigger) => void;
+  startAstraTrial: (source: AstraSource) => void;
   /** Turns routing on from inside Wati — only valid once setup is done. */
-  enableAstra: (mode: RoutingMode, trigger: NudgeTrigger) => void;
+  enableAstra: (mode: RoutingMode, source: AstraSource) => void;
+
+  // --- Iteration 2: Astra pinned in the call log ---------------------------
+  /** Astra's chat thread is showing in the centre pane. */
+  astraPageOpen: boolean;
+  openAstraPage: () => void;
+  closeAstraPage: () => void;
+  /** A call with Astra is on screen, in the regular WhatsApp call widget. */
+  astraCallOpen: boolean;
+  callAstra: () => void;
+  endAstraCall: () => void;
+  /** Briefly rings the pinned row after navigating to it. */
+  pinnedHighlight: boolean;
+  showPinnedSurface: (surface: PinnedSurface) => void;
 
   resetNudgeHistory: () => void;
 }
@@ -71,6 +94,7 @@ interface AstraAdoptionValue {
 const AstraAdoptionCtx = createContext<AstraAdoptionValue | null>(null);
 
 export function AstraAdoptionProvider({ children }: React.PropsWithChildren<{}>) {
+  const [iteration, setIterationState] = useState<AdoptionIteration>(1);
   const [segment, setSegmentState] = useState<WorkspaceSegment>(3);
   const [status, setStatus] = useState<AstraStatus>('not-set-up');
   const [routingMode, setRoutingMode] = useState<RoutingMode>('ai-first');
@@ -80,6 +104,10 @@ export function AstraAdoptionProvider({ children }: React.PropsWithChildren<{}>)
   const [events, setEvents] = useState<AstraEvent[]>([]);
   const [pendingChannel, setPendingChannel] = useState<string | null>(null);
   const [starHighlight, setStarHighlight] = useState(false);
+  const [astraPageOpen, setAstraPageOpen] = useState(false);
+  const [astraCallOpen, setAstraCallOpen] = useState(false);
+  const [pinnedHighlight, setPinnedHighlight] = useState(false);
+  const [morningBriefRun, setMorningBriefRun] = useState(0);
 
   const profile = SEGMENT_PROFILES[segment];
 
@@ -140,21 +168,63 @@ export function AstraAdoptionProvider({ children }: React.PropsWithChildren<{}>)
     log('Dismissed', trigger);
   }, [log]);
 
-  const startAstraTrial = useCallback((trigger: NudgeTrigger) => {
+  const startAstraTrial = useCallback((source: AstraSource) => {
     // The real hand-off opens Astra with the trigger as a source parameter and
     // SSO carries the account across. Here we jump straight to the trial so the
     // whole journey stays demonstrable in one place.
     setStatus('trial');
     setOpenNudge(null);
-    log('Handed off to Astra', astraSetupUrl(trigger));
+    log('Handed off to Astra', astraSetupUrl(source));
   }, [log]);
 
-  const enableAstra = useCallback((mode: RoutingMode, trigger: NudgeTrigger) => {
+  const enableAstra = useCallback((mode: RoutingMode, source: AstraSource) => {
     setRoutingMode(mode);
     setStatus('subscribed-on');
     setOpenNudge(null);
-    log(`Astra on — ${mode}`, trigger);
+    log(`Astra on — ${mode}`, source);
   }, [log]);
+
+  const openAstraPage = useCallback(() => {
+    setAstraPageOpen(true);
+    log('Opened Astra page', 'pinned call-log row');
+  }, [log]);
+  const closeAstraPage = useCallback(() => setAstraPageOpen(false), []);
+
+  const callAstra = useCallback(() => {
+    setAstraCallOpen(true);
+    log('Called Astra', 'from the Astra page');
+  }, [log]);
+  const endAstraCall = useCallback(() => setAstraCallOpen(false), []);
+
+  const showPinnedSurface = useCallback((surface: PinnedSurface) => {
+    setPendingChannel('WhatsApp Calls');
+    if (surface === 'pinned_row') {
+      // Leave the page closed: the point is to see the row in the call log.
+      setAstraPageOpen(false);
+      setPinnedHighlight(true);
+      window.setTimeout(() => setPinnedHighlight(false), 4000);
+      log('Jumped to call log', 'pinned Astra row');
+      return;
+    }
+    setAstraPageOpen(true);
+    if (surface === 'astra_call') setAstraCallOpen(true);
+    log(surface === 'astra_call' ? 'Called Astra' : 'Opened Astra page', 'dev switcher');
+  }, [log]);
+
+  const replayMorningBrief = useCallback(() => {
+    setMorningBriefRun((n) => n + 1);
+    log('Morning brief played', 'Wati AI header');
+  }, [log]);
+
+  // Switching approach clears whatever the other one left on screen. Moving to
+  // iteration 3 stands in for the first login of the day, so the brief plays.
+  const setIteration = useCallback((i: AdoptionIteration) => {
+    setIterationState(i);
+    setOpenNudge(null);
+    setAstraPageOpen(false);
+    setAstraCallOpen(false);
+    if (i === 3) setMorningBriefRun((n) => n + 1);
+  }, []);
 
   const clearPendingChannel = useCallback(() => setPendingChannel(null), []);
 
@@ -175,6 +245,12 @@ export function AstraAdoptionProvider({ children }: React.PropsWithChildren<{}>)
     log('Nudge shown', trigger);
   }, [log, markShown]);
 
+  const showCallLog = useCallback(() => {
+    setPendingChannel('WhatsApp Calls');
+    setAstraPageOpen(false);
+    setOpenNudge(null);
+  }, []);
+
   const setSegment = useCallback((s: WorkspaceSegment) => {
     setSegmentState(s);
     setRoutingMode(SEGMENT_PROFILES[s].recommended);
@@ -188,16 +264,24 @@ export function AstraAdoptionProvider({ children }: React.PropsWithChildren<{}>)
   }, []);
 
   const value = useMemo<AstraAdoptionValue>(() => ({
+    iteration, setIteration, morningBriefRun, replayMorningBrief,
+    astraPageOpen, openAstraPage, closeAstraPage,
+    astraCallOpen, callAstra, endAstraCall,
+    pinnedHighlight, showPinnedSurface,
     segment, status, routingMode, profile, history, events,
     openNudge, lowPickup, afterHours,
-    pendingChannel, clearPendingChannel, starHighlight, showSurface,
+    pendingChannel, clearPendingChannel, starHighlight, showSurface, showCallLog,
     setSegment, setStatus, setRoutingMode,
     requestNudge, openNudgeDirectly, snoozeNudge, dismissNudge, closeNudge,
     startAstraTrial, enableAstra, resetNudgeHistory,
   }), [
+    iteration, setIteration, morningBriefRun, replayMorningBrief,
+    astraPageOpen, openAstraPage, closeAstraPage,
+    astraCallOpen, callAstra, endAstraCall,
+    pinnedHighlight, showPinnedSurface,
     segment, status, routingMode, profile, history, events,
     openNudge, lowPickup.fires, lowPickup.reason, afterHours.fires, afterHours.reason,
-    pendingChannel, clearPendingChannel, starHighlight, showSurface,
+    pendingChannel, clearPendingChannel, starHighlight, showSurface, showCallLog,
     setSegment, requestNudge, openNudgeDirectly, snoozeNudge, dismissNudge,
     closeNudge, startAstraTrial, enableAstra, resetNudgeHistory,
   ]);

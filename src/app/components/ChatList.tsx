@@ -13,27 +13,12 @@ import { CallDetailPanel } from './CallDetailPanel';
 import svgPaths from '../imports/svg-etfg2lzkn3';
 import { VoipAvatar } from './VoipAvatar';
 import { AstraStarButton } from './AstraStarButton';
+import { AstraPinnedCallRow } from './AstraPinnedCallRow';
+import { MissedCallsBanner } from './MissedCallsBanner';
+import { useAstraAdoption } from '../lib/AstraAdoptionContext';
 import { CallHandlerLabel } from './CallHandlerLabel';
 import { VoipCallButton } from './VoipCallButton';
 import { voipCallerLabel, VOIP_CALLS } from '../data/voipCalls';
-
-// Mock agent names for each contact
-const AGENT_NAMES: Record<string, string> = {
-  'Addison Smith': 'Melvis',
-  'Marcus Allen': 'Rohit',
-  'April Boyer': 'Maria',
-  'Sarah Johnson': 'Dylan',
-  'David Chen': 'Nia'
-};
-
-// Mock time data for each call
-const CALL_TIMES: Record<string, string> = {
-  'Addison Smith': '9:10 PM',
-  'Marcus Allen': '10:15 AM',
-  'April Boyer': '1:45 PM',
-  'Sarah Johnson': '3:30 PM',
-  'David Chen': '2:00 PM'
-};
 
 // Mock call history data for each contact
 const CALL_HISTORY_DATA: Record<string, any[]> = {
@@ -204,48 +189,20 @@ const CALL_HISTORY_DATA: Record<string, any[]> = {
   ]
 };
 
-// Mock calls data
+// Mock WhatsApp call log. One entry per interaction — a contact who called
+// three times appears three times; there is no per-contact drill-in.
+// `canCallBack` is false once the contact's calling window has closed, which
+// greys out the call-back button.
 const MOCK_CALLS = [
-  {
-    id: 'call-1',
-    name: 'Addison Smith',
-    phoneNumber: '+18765432210',
-    type: 'incoming' as const,
-    status: 'Inbound call',
-    avatar: 'AS'
-  },
-  {
-    id: 'call-2', 
-    name: 'Marcus Allen',
-    phoneNumber: '+15551234567',
-    type: 'outgoing' as const,
-    status: 'Outbound call',
-    avatar: 'MA'
-  },
-  {
-    id: 'call-3',
-    name: 'April Boyer', 
-    phoneNumber: '+15551234567',
-    type: 'missed' as const,
-    status: 'Missed call',
-    avatar: 'AB'
-  },
-  {
-    id: 'call-4',
-    name: 'Sarah Johnson',
-    phoneNumber: '+15559876543',
-    type: 'unanswered' as const,
-    status: 'Unanswered call',
-    avatar: 'SJ'
-  },
-  {
-    id: 'call-5',
-    name: 'David Chen',
-    phoneNumber: '+15554567890',
-    type: 'active' as const,
-    status: 'On call',
-    avatar: 'DC'
-  }
+  { id: 'call-1', name: 'Vikram', phoneNumber: '+919812345670', type: 'missed' as const, status: 'Missed call', agent: 'Melvis', time: '9:10 PM', canCallBack: true },
+  { id: 'call-2', name: 'Jasmine', phoneNumber: '+919823456781', type: 'outgoing' as const, status: 'Outbound call', agent: 'Rohit', time: '10:15 AM', canCallBack: true },
+  { id: 'call-3', name: 'Alex Butter', phoneNumber: '+15551234567', type: 'unanswered' as const, status: 'Unanswered call', agent: 'Maria', time: '1:45 PM', canCallBack: false },
+  { id: 'call-4', name: 'Sofia V', phoneNumber: '+15559876543', type: 'missed' as const, status: 'Missed call', agent: 'Dylan', time: '3:30 PM', canCallBack: false },
+  { id: 'call-5', name: 'Liam Nilson', phoneNumber: '+15554567890', type: 'incoming' as const, status: 'Inbound call', agent: 'Nia', time: '2:00 PM', canCallBack: true },
+  { id: 'call-6', name: 'Zara Zara', phoneNumber: '+971501234567', type: 'missed' as const, status: 'Missed call', agent: 'Omar', time: '4:20 PM', canCallBack: true },
+  { id: 'call-7', name: 'Eli Goodlink', phoneNumber: '+15557654321', type: 'outgoing' as const, status: 'Outbound call', agent: 'Tara', time: '11:00 AM', canCallBack: false },
+  { id: 'call-8', name: '+91876543210', phoneNumber: '+91876543210', type: 'outgoing' as const, status: 'Outbound call', agent: 'Becca', time: '5:50 PM', canCallBack: true },
+  { id: 'call-9', name: 'Noah', phoneNumber: '+15553456789', type: 'incoming' as const, status: 'Inbound call', agent: 'Chloe', time: '6:30 PM', canCallBack: false },
 ];
 
 // Mock VoIP call records (external VoIP API channel). Each maps to a
@@ -408,8 +365,8 @@ export function ChatList({
   const [isNewMessagePopoverOpen, setIsNewMessagePopoverOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedCallDetail, setSelectedCallDetail] = useState<Call | null>(null);
-  const [viewingContactHistory, setViewingContactHistory] = useState<string | null>(null);
   const [selectedCallRecordId, setSelectedCallRecordId] = useState<string | null>(null);
+  const { iteration, closeAstraPage } = useAstraAdoption();
 
   // Check if WhatsApp functionality should be available
   const isWhatsAppFeatures = selectedChannel === 'WhatsApp';
@@ -417,7 +374,9 @@ export function ChatList({
   const isVoipCalls = selectedChannel === 'VoIP';
 
   // Different tabs based on selected channel
-  const tabs = (isWhatsAppCalls || isVoipCalls)
+  const tabs = isWhatsAppCalls
+    ? ['All', 'Missed', 'Incoming']
+    : isVoipCalls
     ? ['All', 'Incoming', 'Outgoing', 'Missed']
     : ['All', 'Open', 'Unread'];
 
@@ -464,7 +423,7 @@ export function ChatList({
       case 'Outgoing':
         return call.type === 'outgoing';
       case 'Missed':
-        return call.type === 'missed' || call.type === 'unanswered';
+        return call.type === 'missed';
       default:
         return true;
     }
@@ -617,9 +576,8 @@ export function ChatList({
   };
 
   const handleCallClick = (call: any) => {
-    console.log('Call clicked:', call);
-    // Set the contact name to view their call history
-    setViewingContactHistory(call.name);
+    setSelectedCallRecordId(call.id);
+    closeAstraPage();
   };
 
   const handleChatClick = (chat: any) => {
@@ -639,10 +597,6 @@ export function ChatList({
     
     // Otherwise, just select the chat normally
     onSelectChat(chat);
-  };
-
-  const handleBackToList = () => {
-    setViewingContactHistory(null);
   };
 
   const isFilterActive = dateRange.from && dateRange.to;
@@ -675,12 +629,12 @@ export function ChatList({
               </Button>
               
               <div className="flex flex-col">
-                <h2 className="text-lg font-medium text-gray-900 truncate max-w-[200px] transition-all duration-200" title={selectedFilter}>
-                  {selectedFilter}
+                <h2 className="text-lg font-medium text-gray-900 truncate max-w-[200px] transition-all duration-200" title={isWhatsAppCalls ? 'WhatsApp Calls' : selectedFilter}>
+                  {isWhatsAppCalls ? 'WhatsApp Calls' : selectedFilter}
                 </h2>
                 <p className="text-sm text-gray-500 mt-0.5">
                   {isWhatsAppCalls
-                    ? `${filteredCalls.length} Calls • ${filteredCalls.filter(call => call.type === 'incoming').length} Incoming`
+                    ? <>{MOCK_CALLS.length} Calls • <span className="font-semibold text-gray-700">{MOCK_CALLS.filter(call => call.type === 'missed').length} Missed</span></>
                     : isVoipCalls
                     ? `${filteredVoipCalls.length} Calls • ${filteredVoipCalls.filter(call => call.type === 'incoming').length} Incoming`
                     : `${filteredChats.length} Chats • ${filteredChats.filter(chat => chat.unread).length} Unread`
@@ -947,8 +901,8 @@ export function ChatList({
       {/* Divider between header and filter tabs */}
       <div className="border-b border-[#F4F1ED]"></div>
 
-      {/* Filter Tabs - Hide when viewing contact history */}
-      {!(isWhatsAppCalls && viewingContactHistory) && (
+      {/* Filter Tabs */}
+      {(
         <div className="flex items-center gap-2 px-4 py-3 bg-white overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => {
             const isSelected = selectedTab === tab;
@@ -992,138 +946,22 @@ export function ChatList({
         </div>
       )}
 
+      {/* Iteration 4: missed-call overview between the filters and the log */}
+      {isWhatsAppCalls && iteration === 4 && <MissedCallsBanner />}
+
       {/* Chat List or Calls List */}
       <div className="flex-1 overflow-y-auto">
         {isWhatsAppCalls ? (
-          viewingContactHistory ? (
-            // Detail view - showing all calls with a specific contact
-            <>
-              {/* Back button header */}
-              <div className="sticky top-0 bg-white border-b border-[#e7e9e8] flex items-center gap-3 z-10 p-[10px]">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={handleBackToList}
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-700" />
-                </Button>
-                <h3 className="font-['Inter'] font-semibold text-[16px] leading-[24px] text-[#505451]">
-                  Calls with {viewingContactHistory}
-                </h3>
-              </div>
-
-              {/* Call history list */}
-              {CALL_HISTORY_DATA[viewingContactHistory]?.map((historyCall, index) => {
-                // Find the corresponding chat for this contact - search in ALL chats, not just filtered
-                const searchChats = allChats || chats;
-                const correspondingChat = searchChats.find(chat => chat.name === viewingContactHistory);
-                const isCallSelected = selectedCallRecordId === historyCall.id;
-                
-                return (
-                  <div 
-                    key={historyCall.id}
-                    className={`relative px-4 py-4 border-b border-[#e7e9e8] hover:bg-gray-50/50 transition-colors cursor-pointer ${
-                      isCallSelected ? 'bg-[#ebf7f0]' : ''
-                    }`}
-                    onClick={() => {
-                      console.log('Call clicked:', historyCall.id);
-                      console.log('Viewing contact:', viewingContactHistory);
-                      console.log('Searching in chats (length):', searchChats.length);
-                      console.log('Corresponding chat found:', correspondingChat);
-                      console.log('onSelectCallTranscription exists:', !!onSelectCallTranscription);
-                      
-                      // Set this call as selected
-                      setSelectedCallRecordId(historyCall.id);
-                      
-                      if (correspondingChat && onSelectCallTranscription) {
-                        // Select the chat and set to transcription tab
-                        onSelectCallTranscription(correspondingChat, historyCall.id);
-                      } else {
-                        console.error('Missing correspondingChat or onSelectCallTranscription');
-                        if (!correspondingChat) console.error('Could not find chat with name:', viewingContactHistory);
-                        if (!onSelectCallTranscription) console.error('onSelectCallTranscription function not provided');
-                      }
-                    }}
-                  >
-                    {/* Left border indicator for selected call */}
-                    {isCallSelected && (
-                      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#69e48e]" />
-                    )}
-                    
-                    <div className="flex items-start gap-3">
-                      {/* Call type icon */}
-                      <div className="flex-shrink-0 mt-0.5">
-                        {historyCall.type === 'inbound' ? (
-                          <div className="w-5 h-5 flex items-center justify-center">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
-                              <path d={svgPaths.p21a43400} fill="#23a455" />
-                            </svg>
-                          </div>
-                        ) : historyCall.type === 'outbound' ? (
-                          <div className="w-5 h-5 flex items-center justify-center">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
-                              <path d={svgPaths.pe3ccb00} fill="#23a455" />
-                            </svg>
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 flex items-center justify-center">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 16 16">
-                              <path d={svgPaths.p3c155c80} fill="#ef5766" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Call details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <div className="flex-1">
-                            <p className="font-['Inter'] font-semibold text-[14px] leading-[20px] text-[#505451]">
-                              {historyCall.type === 'inbound' ? 'Inbound Call' : 
-                               historyCall.type === 'outbound' ? 'Outbound Call' : 
-                               'Missed Call'}
-                            </p>
-                            {historyCall.duration && (
-                              <p className="font-['Inter'] font-normal text-[12px] leading-[16px] text-[#848a86] mt-0.5">
-                                Duration: {historyCall.duration}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex-shrink-0">
-                            
-                            <p className="font-['Inter'] font-normal text-[12px] leading-[16px] text-[#848a86] text-right mt-0.5">
-                              {historyCall.time}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* View Transcription link - show for all completed calls */}
-                        {historyCall.status === 'connected' && historyCall.duration && (
-                          <div className="flex items-center gap-2 mt-2">
-                            
-                          </div>
-                        )}
-
-                        {/* Notes */}
-                        {historyCall.notes && (
-                          null
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </>
-          ) : (
-          // Main list - showing contacts with call counts
-          // Render calls when WhatsApp Calls channel is selected
+          // One row per call interaction
           <>
+            {/* Iteration 2: Astra pinned above the log, where missed calls are looked at */}
+            {iteration === 2 && (selectedTab === 'All' || selectedTab === 'Missed') && !searchQuery && (
+              <AstraPinnedCallRow />
+            )}
             {filteredCalls.map((call) => {
-              const agentName = AGENT_NAMES[call.name] || 'Agent';
-              const callTime = CALL_TIMES[call.name] || '00:00';
-              const interactionCount = CALL_HISTORY_DATA[call.name]?.length || 0;
-              const isSelected = selectedChat.name === call.name;
+              const agentName = call.agent;
+              const callTime = call.time;
+              const isSelected = selectedCallRecordId === call.id;
               
               return (
                 <div 
@@ -1165,13 +1003,13 @@ export function ChatList({
                       </div>
                       {/* Call status badge */}
                       <div className={`absolute -translate-y-1/2 aspect-[16/16] border border-solid border-white left-1/2 right-0 rounded-lg top-[calc(50%+8px)] w-3 h-3 flex items-center justify-center ${
-                        call.type === 'missed' || call.type === 'unanswered' ? 'bg-[#ef5766]' : 'bg-[#23a455]'
+                        call.type === 'missed' ? 'bg-[#ef5766]' : 'bg-[#23a455]'
                       }`}>
-                        {call.type === 'missed' || call.type === 'unanswered' ? (
+                        {call.type === 'missed' ? (
                           <svg className="w-3 h-3" fill="none" preserveAspectRatio="none" viewBox="0 0 12 12">
                             <path d={svgPaths.p3c155c80} fill="white" />
                           </svg>
-                        ) : call.type === 'outgoing' ? (
+                        ) : call.type === 'outgoing' || call.type === 'unanswered' ? (
                           <svg className="w-3 h-3" fill="none" preserveAspectRatio="none" viewBox="0 0 12 12">
                             <path d={svgPaths.pe3ccb00} fill="white" />
                           </svg>
@@ -1191,11 +1029,6 @@ export function ChatList({
                           <p className="font-['Inter'] font-bold text-[14px] leading-[20px] text-[#505451] flex-shrink-0">
                             {call.name}
                           </p>
-                          {interactionCount > 1 && (
-                            <span className="font-['Inter'] font-normal text-[12px] leading-[16px] text-[#848a86] ml-0.5">
-                              ({interactionCount})
-                            </span>
-                          )}
                         </div>
                         
                         {/* Vertical separator */}
@@ -1236,7 +1069,7 @@ export function ChatList({
                     
                     {/* Phone icon button */}
                     <div className="flex items-center pt-0.5">
-                      {call.type === 'unanswered' ? (
+                      {!call.canCallBack ? (
                         <button 
                           className="p-1 rounded-lg flex items-center justify-center"
                           onClick={(e) => {
@@ -1276,7 +1109,7 @@ export function ChatList({
               </div>
             )}
           </>
-        )) : isVoipCalls ? (
+        ) : isVoipCalls ? (
           // Render VoIP call records (black-accented channel)
           <>
             {filteredVoipCalls.map((call) => {
@@ -1384,7 +1217,7 @@ export function ChatList({
       )}
 
       {/* Call Detail Panel - Only show when NOT viewing contact history inline */}
-      {selectedCallDetail && !viewingContactHistory && (
+      {selectedCallDetail && (
         <CallDetailPanel
           isOpen={true}
           onClose={() => setSelectedCallDetail(null)}

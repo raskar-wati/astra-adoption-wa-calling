@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import TopNavigation from './components/TopNavigation';
+import { SideNavigation } from './components/SideNavigation';
 import { Sidebar } from './components/Sidebar';
 import { ChatList } from './components/ChatList';
 import { ContactInfo } from './components/ContactInfo';
@@ -13,6 +14,8 @@ import { VoipDialer } from './components/VoipDialer';
 import { AstraAdoptionProvider, useAstraAdoption } from './lib/AstraAdoptionContext';
 import { AstraNudgeModal } from './components/AstraNudgeModal';
 import { AstraDevSwitcher } from './components/AstraDevSwitcher';
+import { AstraConversation } from './components/AstraConversation';
+import { AstraVoiceCall } from './components/AstraVoiceCall';
 import { VoipCallDetail } from './components/VoipCallDetail';
 import { VoipContactInfo } from './components/VoipContactInfo';
 import { VOIP_CALLS } from './data/voipCalls';
@@ -213,7 +216,10 @@ const CONTACT_INFO: Record<string, ContactInfoData> = {
 };
 
 function TeamInbox() {
-  const { lowPickup, afterHours, requestNudge, pendingChannel, clearPendingChannel } = useAstraAdoption();
+  const {
+    iteration, segment, lowPickup, afterHours, requestNudge, pendingChannel, clearPendingChannel,
+    astraPageOpen, closeAstraPage, astraCallOpen, endAstraCall,
+  } = useAstraAdoption();
   const [selectedView, setSelectedView] = useState<'home' | 'settings'>('home');
 
   // The demo controls ask for a channel so a surface is shown in context
@@ -229,12 +235,14 @@ function TeamInbox() {
   // qualify: it greets you on the first load of the day. requestNudge applies
   // the fatigue policy, so this asking every render costs nothing.
   useEffect(() => {
+    // Iteration 2 never interrupts — Astra waits in the call log instead.
+    if (iteration !== 1) return;
     const trigger = afterHours.fires ? 'after_hours' : lowPickup.fires ? 'low_pickup_rate' : null;
     if (!trigger) return;
     // Let the inbox paint first; landing on a cold modal reads as an error.
     const id = window.setTimeout(() => requestNudge(trigger), 1200);
     return () => window.clearTimeout(id);
-  }, [afterHours.fires, lowPickup.fires, requestNudge]);
+  }, [iteration, afterHours.fires, lowPickup.fires, requestNudge]);
   const [selectedChannel, setSelectedChannel] = useState<string>('All Channels');
   const [selectedChatId, setSelectedChatId] = useState<string | null>('1');
   const [selectedCallId, setSelectedCallId] = useState<string | undefined>(undefined);
@@ -311,6 +319,7 @@ function TeamInbox() {
     setSelectedChatId(chat.id);
     // Leaving a call record — return to the messages view
     setSelectedCallId(undefined);
+    closeAstraPage();
   };
 
   const handleSelectCallTranscription = (chat: any, callId: string) => {
@@ -332,7 +341,18 @@ function TeamInbox() {
   };
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#f5f6fa] overflow-hidden">
+      {/* App shell: global header, product rail, then the module in a card */}
+      <TopNavigation />
+      <div className="flex flex-1 min-h-0">
+      <SideNavigation
+        active={selectedView === 'settings' ? 'settings' : 'inbox'}
+        onNavigate={(m) => {
+          if (m === 'settings') setSelectedView('settings');
+          if (m === 'inbox') setSelectedView('home');
+        }}
+      />
+      <div className="flex flex-1 min-w-0 mr-[8px] bg-white border border-b-0 border-[#e7e9e8] rounded-t-[8px] overflow-hidden">
       {/* Sidebar */}
       <Sidebar 
         selectedFilter={selectedFilter}
@@ -350,8 +370,6 @@ function TeamInbox() {
 
       {/* Main Content */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Top Navigation */}
-        <TopNavigation />
 
         {/* Content Area */}
         {selectedView === 'settings' ? (
@@ -387,6 +405,9 @@ function TeamInbox() {
             <ResizablePanel defaultSize={50} minSize={40}>
               {isVoip ? (
                 <VoipCallDetail call={selectedVoipCall} onCallContact={handleVoipCall} />
+              ) : selectedChannel === 'WhatsApp Calls' && astraPageOpen ? (
+                // Keyed on segment so switching customer restarts the thread with their numbers.
+                <AstraConversation key={segment} />
               ) : selectedChat ? (
                 <ChatInterface
                   selectedChat={selectedChat}
@@ -427,6 +448,9 @@ function TeamInbox() {
         )}
       </div>
 
+      </div>
+      </div>
+
       {/* Call Widget Overlay */}
       {showCallWidget && (
         <>
@@ -439,6 +463,9 @@ function TeamInbox() {
           </div>
         </>
       )}
+
+      {/* A call with Astra has its own voice UI */}
+      {astraCallOpen && <AstraVoiceCall onEnd={endAstraCall} />}
 
       {/* Scorecard Builder Overlay */}
       {showScorecardBuilder && (

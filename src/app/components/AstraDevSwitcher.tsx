@@ -2,195 +2,174 @@ import { useState } from 'react';
 import { FlaskConical, ChevronDown, RotateCcw, ArrowRight } from 'lucide-react';
 import { useAstraAdoption } from '../lib/AstraAdoptionContext';
 import {
+  AdoptionIteration,
   AstraStatus,
   NudgeTrigger,
-  SEGMENT_PROFILES,
+  PinnedSurface,
   WorkspaceSegment,
   pickupRate,
-  unansweredCount,
 } from '../lib/astraAdoption';
 
-// Demo scaffolding, not product UI. Reads as three steps: pick who the customer
-// is, pick how far along they are with Astra, then jump to a surface and watch
-// it change. Each surface button navigates to where it actually lives, because
-// a modal over an unrelated screen does not show you anything.
+// Demo scaffolding, not product UI, so it stays monochrome and out of the way.
+// Pick the approach, the customer and their Astra status, then jump to a
+// surface — each jump navigates to where the surface actually lives.
 
 const SEGMENTS: WorkspaceSegment[] = [1, 2, 3];
 
 const STATUSES: { value: AstraStatus; label: string }[] = [
   { value: 'not-set-up', label: 'Not set up' },
-  { value: 'trial', label: 'Free trial' },
-  { value: 'subscribed-off', label: 'Subscribed, off' },
-  { value: 'subscribed-on', label: 'Astra answering' },
+  { value: 'trial', label: 'Trial' },
+  { value: 'subscribed-off', label: 'Paid, off' },
+  { value: 'subscribed-on', label: 'On' },
 ];
 
-const SURFACES: { trigger: NudgeTrigger; name: string; where: string }[] = [
-  { trigger: 'low_pickup_rate', name: 'Low pickup alert', where: 'Pop-up over the call log' },
-  { trigger: 'after_hours', name: 'Morning-after nudge', where: 'Pop-up on first load of the day' },
-  { trigger: 'logs_star_icon', name: 'Missed-call star', where: 'Inline in the call log' },
+const ITERATIONS: { value: AdoptionIteration; label: string }[] = [
+  { value: 1, label: 'Pop-ups' },
+  { value: 2, label: 'Pinned' },
+  { value: 3, label: 'Brief' },
+  { value: 4, label: 'Banner' },
 ];
 
-function Step({ n, title, children }: React.PropsWithChildren<{ n: number; title: string }>) {
+const PINNED_SURFACES: { surface: PinnedSurface; name: string }[] = [
+  { surface: 'pinned_row', name: 'Pinned Astra row' },
+  { surface: 'education_page', name: 'Astra thread' },
+  { surface: 'astra_call', name: 'Call with Astra' },
+];
+
+const SURFACES: { trigger: NudgeTrigger; name: string }[] = [
+  { trigger: 'low_pickup_rate', name: 'Low pickup alert' },
+  { trigger: 'after_hours', name: 'Morning-after nudge' },
+  { trigger: 'logs_star_icon', name: 'Missed-call star' },
+];
+
+// One labelled row of mutually exclusive options.
+function Segmented<T extends string | number>({
+  label,
+  value,
+  options,
+  onChange,
+  caption,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (v: T) => void;
+  caption?: string;
+}) {
   return (
     <div>
-      <p className="flex items-center gap-1.5 text-white/50 mb-1.5">
-        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-white/10 text-[10px] text-white/70">
-          {n}
-        </span>
-        {title}
-      </p>
-      {children}
+      <p className="text-white/40 mb-1">{label}</p>
+      <div className="flex gap-0.5 p-0.5 rounded-md bg-white/5">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            className={`flex-1 px-1.5 py-1 rounded transition-colors whitespace-nowrap ${
+              value === o.value ? 'bg-white text-black font-medium' : 'text-white/60 hover:text-white'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      {caption && <p className="text-white/40 mt-1">{caption}</p>}
     </div>
+  );
+}
+
+function SurfaceLink({ name, onClick }: { name: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-between px-2 py-1.5 rounded text-white/80 hover:bg-white/10 hover:text-white transition-colors group"
+    >
+      {name}
+      <ArrowRight className="w-3 h-3 text-white/30 group-hover:text-white transition-colors" />
+    </button>
   );
 }
 
 export function AstraDevSwitcher() {
   const [open, setOpen] = useState(false);
   const {
-    segment, status, routingMode, profile, history, events,
-    lowPickup, afterHours,
-    setSegment, setStatus, showSurface, resetNudgeHistory,
+    iteration, setIteration, showPinnedSurface, replayMorningBrief,
+    segment, status, profile,
+    setSegment, setStatus, showSurface, showCallLog, resetNudgeHistory,
   } = useAstraAdoption();
 
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 left-4 z-40 inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-gray-900 text-white text-xs font-medium shadow-lg hover:bg-black transition-colors"
+        className="fixed bottom-4 left-4 z-40 inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-black text-white text-[12px] font-medium shadow-lg hover:bg-neutral-800 transition-colors"
       >
         <FlaskConical className="w-3.5 h-3.5" />
-        Segment {segment}
+        Segment {segment} · {ITERATIONS.find((it) => it.value === iteration)!.label}
       </button>
     );
   }
 
-  const verdictFor = (t: NudgeTrigger) =>
-    t === 'low_pickup_rate' ? lowPickup : t === 'after_hours' ? afterHours : null;
+  // Jump to a surface and get the panel out of the way.
+  const go = (fn: () => void) => () => { fn(); setOpen(false); };
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 w-[22rem] rounded-xl bg-gray-900 text-white shadow-2xl overflow-hidden text-xs">
+    <div className="fixed bottom-4 left-4 z-40 w-[17rem] rounded-xl bg-black text-white shadow-2xl overflow-hidden text-[12px] leading-[16px]">
       <button
         onClick={() => setOpen(false)}
-        className="w-full flex items-center justify-between px-3 py-2.5 bg-black/30 hover:bg-black/40 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2.5 border-b border-white/10 hover:bg-white/5 transition-colors"
       >
         <span className="inline-flex items-center gap-1.5 font-medium">
           <FlaskConical className="w-3.5 h-3.5" />
-          Astra adoption — demo controls
+          Demo controls
         </span>
-        <ChevronDown className="w-3.5 h-3.5" />
+        <ChevronDown className="w-3.5 h-3.5 text-white/60" />
       </button>
 
-      <div className="p-3 space-y-3.5 max-h-[72vh] overflow-y-auto">
-        <Step n={1} title="Who is this customer?">
-          <div className="space-y-1">
-            {SEGMENTS.map((s) => {
-              const p = SEGMENT_PROFILES[s];
-              const active = segment === s;
-              return (
-                <button
-                  key={s}
-                  onClick={() => setSegment(s)}
-                  className={`w-full text-left px-2.5 py-2 rounded-lg transition-colors ${
-                    active ? 'bg-wati-green text-white' : 'bg-white/5 hover:bg-white/10 text-white/80'
-                  }`}
-                >
-                  <span className="font-medium">{s}. {p.name}</span>
-                  <span className={`block mt-0.5 ${active ? 'text-white/80' : 'text-white/40'}`}>
-                    {Math.round(pickupRate(p) * 100)}% pickup · {unansweredCount(p)} unanswered
-                    {s === 1 && ' · never nudged'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Step>
+      <div className="p-3 space-y-3 max-h-[72vh] overflow-y-auto">
+        <Segmented label="Approach" value={iteration} options={ITERATIONS} onChange={setIteration} />
 
-        <Step n={2} title="How far along are they?">
-          <div className="grid grid-cols-2 gap-1">
-            {STATUSES.map((s) => (
-              <button
-                key={s.value}
-                onClick={() => setStatus(s.value)}
-                className={`px-2 py-1.5 rounded-lg transition-colors ${
-                  status === s.value ? 'bg-wati-green text-white' : 'bg-white/5 hover:bg-white/10 text-white/70'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-white/40 mt-1.5">
-            {status === 'not-set-up'
-              ? 'CTA hands off to Astra for a 7-day trial.'
-              : status === 'subscribed-on'
-                ? `Astra is answering (${routingMode}) — nudges stop.`
-                : 'CTA turns routing on inside Wati.'}
-          </p>
-        </Step>
+        <Segmented
+          label="Customer"
+          value={segment}
+          options={SEGMENTS.map((s) => ({ value: s, label: `Segment ${s}` }))}
+          onChange={setSegment}
+          caption={`${profile.name} · ${Math.round(pickupRate(profile) * 100)}% pickup`}
+        />
 
-        <Step n={3} title="Show me a surface">
-          <div className="space-y-1">
-            {SURFACES.map((s) => {
-              const verdict = verdictFor(s.trigger);
-              const blocked = verdict && !verdict.fires;
-              return (
-                <button
-                  key={s.trigger}
-                  onClick={() => { showSurface(s.trigger); setOpen(false); }}
-                  className="w-full flex items-center gap-2 text-left px-2.5 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-white/90 font-medium">{s.name}</p>
-                    <p className="text-white/40">{s.where}</p>
-                    {blocked && (
-                      <p className="text-amber-300/70 mt-0.5">
-                        Would not fire on its own — {verdict!.reason}
-                      </p>
-                    )}
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 shrink-0 text-white/40 group-hover:text-white transition-colors" />
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-white/40 mt-1.5">
-            Takes you to the call log and shows it, whatever the fatigue rules say.
-          </p>
-        </Step>
+        {iteration !== 3 && (
+          <Segmented label="Astra" value={status} options={STATUSES} onChange={setStatus} />
+        )}
 
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <p className="text-white/50">Nudge history</p>
-            <button
-              onClick={resetNudgeHistory}
-              className="inline-flex items-center gap-1 text-white/60 hover:text-white transition-colors"
-            >
-              <RotateCcw className="w-3 h-3" />
-              Reset
-            </button>
-          </div>
-          <div className="space-y-0.5 text-white/40">
-            {Object.entries(history).map(([key, rec]) => (
-              <p key={key}>
-                {key}: {rec.dismissals} dismissed{rec.retired ? ' · retired' : ''}
-                {rec.snoozedUntil ? ' · snoozed' : ''}
-              </p>
-            ))}
+          <p className="text-white/40 mb-1">Show</p>
+          <div className="-mx-2">
+            {iteration === 4 ? (
+              <>
+                <SurfaceLink name="Missed-calls banner" onClick={go(showCallLog)} />
+                <SurfaceLink name="Astra pop-up" onClick={go(() => showSurface('call_log_banner'))} />
+              </>
+            ) : iteration === 3 ? (
+              <SurfaceLink name="Replay morning brief" onClick={go(replayMorningBrief)} />
+            ) : iteration === 2 ? (
+              PINNED_SURFACES.map((s) => (
+                <SurfaceLink key={s.surface} name={s.name} onClick={go(() => showPinnedSurface(s.surface))} />
+              ))
+            ) : (
+              SURFACES.map((s) => (
+                <SurfaceLink key={s.trigger} name={s.name} onClick={go(() => showSurface(s.trigger))} />
+              ))
+            )}
           </div>
         </div>
 
-        {events.length > 0 && (
-          <div>
-            <p className="text-white/50 mb-1.5">Events</p>
-            <div className="space-y-1">
-              {events.map((e, i) => (
-                <div key={i} className="px-2.5 py-1.5 rounded-lg bg-white/5">
-                  <p className="text-white/80">{e.label}</p>
-                  {e.detail && <p className="text-white/40 break-all">{e.detail}</p>}
-                </div>
-              ))}
-            </div>
-          </div>
+        {iteration === 1 && (
+          <button
+            onClick={resetNudgeHistory}
+            className="inline-flex items-center gap-1 text-white/40 hover:text-white transition-colors"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset nudge history
+          </button>
         )}
       </div>
     </div>

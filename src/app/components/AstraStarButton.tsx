@@ -11,9 +11,10 @@ interface AstraStarButtonProps {
 }
 
 export function AstraStarButton({ contactName, className = '' }: AstraStarButtonProps) {
-  const { segment, status, openNudgeDirectly, starHighlight } = useAstraAdoption();
+  const { iteration, segment, status, openNudgeDirectly, starHighlight } = useAstraAdoption();
 
-  if (!isNudgeable(segment, status)) return null;
+  // The star belongs to iteration 1; later iterations introduce Astra elsewhere.
+  if (iteration !== 1 || !isNudgeable(segment, status)) return null;
 
   return (
     <button

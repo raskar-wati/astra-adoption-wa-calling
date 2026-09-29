@@ -1,4 +1,4 @@
-import { PhoneMissed, Moon, Sparkles, X } from 'lucide-react';
+import { PhoneMissed, Moon, Sparkles, X, Play } from 'lucide-react';
 import { AstraLogo } from './AstraLogo';
 import { useAstraAdoption } from '../lib/AstraAdoptionContext';
 import {
@@ -17,12 +17,13 @@ const TRIGGER_META: Record<NudgeTrigger, { icon: typeof PhoneMissed; eyebrow: st
   low_pickup_rate: { icon: PhoneMissed, eyebrow: 'Low pickup rate' },
   after_hours: { icon: Moon, eyebrow: 'After-hours calls' },
   logs_star_icon: { icon: Sparkles, eyebrow: 'Stop missing calls' },
+  call_log_banner: { icon: PhoneMissed, eyebrow: 'Missed calls' },
 };
 
 export function AstraNudgeModal() {
   const {
     openNudge, profile, segment, status, routingMode,
-    closeNudge, snoozeNudge, dismissNudge, startAstraTrial, enableAstra,
+    closeNudge, snoozeNudge, dismissNudge, startAstraTrial, enableAstra, callAstra,
   } = useAstraAdoption();
 
   if (!openNudge) return null;
@@ -39,6 +40,8 @@ export function AstraNudgeModal() {
       ? `${profile.afterHoursCalls} people called after you closed`
       : trigger === 'logs_star_icon'
         ? 'Stop missing calls from leads'
+        : trigger === 'call_log_banner'
+          ? `Astra can pick up the ${unanswered} calls you missed`
         : `You answered ${rate}% of your calls today`;
 
   const body =
@@ -106,21 +109,33 @@ export function AstraNudgeModal() {
         </div>
 
         <div className="px-6 py-5 mt-1 flex flex-col gap-2">
-          {needsSetup ? (
-            <button
-              onClick={() => startAstraTrial(trigger)}
-              className="w-full px-4 py-2.5 rounded-lg bg-wati-green text-white text-sm font-medium hover:bg-wati-green-dark transition-colors"
-            >
-              Start 7-day free trial
-            </button>
-          ) : (
-            <button
-              onClick={() => enableAstra(mode, trigger)}
-              className="w-full px-4 py-2.5 rounded-lg bg-wati-green text-white text-sm font-medium hover:bg-wati-green-dark transition-colors"
-            >
-              Turn on {ROUTING_COPY[mode].label}
-            </button>
-          )}
+          {/* The banner pop-up (iteration 4) also lets them hear Astra before committing */}
+          <div className="flex gap-2">
+            {trigger === 'call_log_banner' && (
+              <button
+                onClick={() => { closeNudge(); callAstra(); }}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                <Play className="w-3.5 h-3.5" />
+                View demo
+              </button>
+            )}
+            {needsSetup ? (
+              <button
+                onClick={() => startAstraTrial(trigger)}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-wati-green text-white text-sm font-medium hover:bg-wati-green-dark transition-colors"
+              >
+                Start 7-day free trial
+              </button>
+            ) : (
+              <button
+                onClick={() => enableAstra(mode, trigger)}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-wati-green text-white text-sm font-medium hover:bg-wati-green-dark transition-colors"
+              >
+                Turn on {ROUTING_COPY[mode].label}
+              </button>
+            )}
+          </div>
 
           <div className="flex items-center justify-between">
             <button

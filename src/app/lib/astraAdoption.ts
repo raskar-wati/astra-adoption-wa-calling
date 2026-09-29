@@ -21,7 +21,22 @@ export type RoutingMode = 'ai-first' | 'overflow';
 
 // Doubles as the `source` parameter on the hand-off URL, so the trigger that
 // earned the click is attributable on Astra's side.
-export type NudgeTrigger = 'low_pickup_rate' | 'after_hours' | 'logs_star_icon';
+export type NudgeTrigger = 'low_pickup_rate' | 'after_hours' | 'logs_star_icon' | 'call_log_banner';
+
+// Which adoption approach the prototype is demoing. Iteration 1 interrupts with
+// pop-ups; iteration 2 waits to be opened — Astra sits pinned in the call log
+// and the pitch is a thread the user chose to open, plus a call with Astra.
+// Iteration 3 is a morning brief: Wati AI, which the user already knows,
+// tells yesterday's call story in the header and introduces Astra at the end.
+// Iteration 4 is a plain banner over the call log: it only reports what was
+// missed, and Astra is pitched in the pop-up it opens.
+export type AdoptionIteration = 1 | 2 | 3 | 4;
+
+// Every place a hand-off to Astra can start from, for the `source` parameter.
+export type AstraSource = NudgeTrigger | 'call_log_pinned';
+
+// The iteration 2 surfaces the dev switcher can jump straight to.
+export type PinnedSurface = 'pinned_row' | 'education_page' | 'astra_call';
 
 export interface SegmentProfile {
   segment: WorkspaceSegment;
@@ -33,6 +48,12 @@ export interface SegmentProfile {
   attempts: number;
   /** Calls that arrived after business hours yesterday evening. */
   afterHoursCalls: number;
+  /** Unanswered callers nobody has called back yet. */
+  awaitingCallback: number;
+  /** Numbers that tried more than once and never got through. */
+  repeatCallers: number;
+  /** When unanswered calls cluster. */
+  busiestWindow: string;
   /** The routing mode that actually suits this segment. */
   recommended: RoutingMode;
 }
@@ -45,6 +66,9 @@ export const SEGMENT_PROFILES: Record<WorkspaceSegment, SegmentProfile> = {
     answered: 2,
     attempts: 6,
     afterHoursCalls: 0,
+    awaitingCallback: 3,
+    repeatCallers: 0,
+    busiestWindow: '11 am – 12 pm',
     recommended: 'overflow',
   },
   2: {
@@ -54,6 +78,9 @@ export const SEGMENT_PROFILES: Record<WorkspaceSegment, SegmentProfile> = {
     answered: 28,
     attempts: 62,
     afterHoursCalls: 6,
+    awaitingCallback: 19,
+    repeatCallers: 5,
+    busiestWindow: '12 – 2 pm',
     recommended: 'overflow',
   },
   3: {
@@ -63,6 +90,9 @@ export const SEGMENT_PROFILES: Record<WorkspaceSegment, SegmentProfile> = {
     answered: 9,
     attempts: 78,
     afterHoursCalls: 23,
+    awaitingCallback: 52,
+    repeatCallers: 14,
+    busiestWindow: '6 – 9 pm',
     recommended: 'ai-first',
   },
 };
@@ -116,6 +146,7 @@ export function emptyNudgeHistory(): NudgeHistory {
     low_pickup_rate: emptyNudgeRecord(),
     after_hours: emptyNudgeRecord(),
     logs_star_icon: emptyNudgeRecord(),
+    call_log_banner: emptyNudgeRecord(),
   };
 }
 
@@ -177,8 +208,8 @@ export function evaluateAfterHours(ctx: TriggerContext): TriggerVerdict {
 }
 
 /** Hand-off to Astra, carrying the trigger that earned the click. */
-export function astraSetupUrl(trigger: NudgeTrigger): string {
-  return `https://astra.ai/setup?source=wati_${trigger}`;
+export function astraSetupUrl(source: AstraSource): string {
+  return `https://astra.ai/setup?source=wati_${source}`;
 }
 
 export const ROUTING_COPY: Record<RoutingMode, { label: string; blurb: string }> = {
