@@ -3,7 +3,9 @@ import { FlaskConical, ChevronDown, RotateCcw, ArrowRight } from 'lucide-react';
 import { useAstraAdoption } from '../lib/AstraAdoptionContext';
 import {
   AdoptionIteration,
+  AnalyticsIteration,
   AstraStatus,
+  DemoPage,
   NudgeTrigger,
   PinnedSurface,
   WorkspaceSegment,
@@ -11,8 +13,9 @@ import {
 } from '../lib/astraAdoption';
 
 // Demo scaffolding, not product UI, so it stays monochrome and out of the way.
-// Pick the approach, the customer and their Astra status, then jump to a
-// surface — each jump navigates to where the surface actually lives.
+// Pick the page, then — for Team Inbox — the approach, the customer and their
+// Astra status, and jump to a surface; each jump navigates to where the
+// surface actually lives. Analytics has its own approaches.
 
 const SEGMENTS: WorkspaceSegment[] = [1, 2, 3];
 
@@ -23,11 +26,21 @@ const STATUSES: { value: AstraStatus; label: string }[] = [
   { value: 'subscribed-on', label: 'On' },
 ];
 
+const PAGES: { value: DemoPage; label: string }[] = [
+  { value: 'inbox', label: 'Team Inbox' },
+  { value: 'analytics', label: 'Analytics' },
+];
+
 const ITERATIONS: { value: AdoptionIteration; label: string }[] = [
   { value: 1, label: 'Pop-ups' },
   { value: 2, label: 'Pinned' },
   { value: 3, label: 'Brief' },
   { value: 4, label: 'Banner' },
+];
+
+const ANALYTICS_ITERATIONS: { value: AnalyticsIteration; label: string }[] = [
+  { value: 1, label: 'Banner' },
+  { value: 2, label: 'Peek' },
 ];
 
 const PINNED_SURFACES: { surface: PinnedSurface; name: string }[] = [
@@ -92,6 +105,7 @@ function SurfaceLink({ name, onClick }: { name: string; onClick: () => void }) {
 export function AstraDevSwitcher() {
   const [open, setOpen] = useState(false);
   const {
+    page, setPage, analyticsIteration, setAnalyticsIteration, openNudgeDirectly, closeNudge,
     iteration, setIteration, showPinnedSurface, replayMorningBrief,
     segment, status, profile,
     setSegment, setStatus, showSurface, showCallLog, resetNudgeHistory,
@@ -104,7 +118,9 @@ export function AstraDevSwitcher() {
         className="fixed bottom-4 left-4 z-40 inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-black text-white text-[12px] font-medium shadow-lg hover:bg-neutral-800 transition-colors"
       >
         <FlaskConical className="w-3.5 h-3.5" />
-        Segment {segment} · {ITERATIONS.find((it) => it.value === iteration)!.label}
+        Segment {segment} · {page === 'analytics'
+          ? `Analytics ${ANALYTICS_ITERATIONS.find((it) => it.value === analyticsIteration)!.label}`
+          : ITERATIONS.find((it) => it.value === iteration)!.label}
       </button>
     );
   }
@@ -126,7 +142,13 @@ export function AstraDevSwitcher() {
       </button>
 
       <div className="p-3 space-y-3 max-h-[72vh] overflow-y-auto">
-        <Segmented label="Approach" value={iteration} options={ITERATIONS} onChange={setIteration} />
+        <Segmented label="Page" value={page} options={PAGES} onChange={setPage} />
+
+        {page === 'inbox' ? (
+          <Segmented label="Approach" value={iteration} options={ITERATIONS} onChange={setIteration} />
+        ) : (
+          <Segmented label="Approach" value={analyticsIteration} options={ANALYTICS_ITERATIONS} onChange={setAnalyticsIteration} />
+        )}
 
         <Segmented
           label="Customer"
@@ -136,11 +158,30 @@ export function AstraDevSwitcher() {
           caption={`${profile.name} · ${Math.round(pickupRate(profile) * 100)}% pickup`}
         />
 
-        {iteration !== 3 && (
+        {(page === 'analytics' || iteration !== 3) && (
           <Segmented label="Astra" value={status} options={STATUSES} onChange={setStatus} />
         )}
 
-        <div>
+        {page === 'analytics' && (
+          <div>
+            <p className="text-white/40 mb-1">Show</p>
+            <div className="-mx-2">
+              <SurfaceLink
+                name={analyticsIteration === 1 ? 'Analytics banner' : 'Peek card'}
+                onClick={go(() => { closeNudge(); setPage('analytics'); })}
+              />
+              <SurfaceLink
+                name="Astra pop-up"
+                onClick={go(() => {
+                  setPage('analytics');
+                  openNudgeDirectly(analyticsIteration === 1 ? 'analytics_banner' : 'analytics_peek');
+                })}
+              />
+            </div>
+          </div>
+        )}
+
+        {page === 'inbox' && <div>
           <p className="text-white/40 mb-1">Show</p>
           <div className="-mx-2">
             {iteration === 4 ? (
@@ -160,9 +201,9 @@ export function AstraDevSwitcher() {
               ))
             )}
           </div>
-        </div>
+        </div>}
 
-        {iteration === 1 && (
+        {page === 'inbox' && iteration === 1 && (
           <button
             onClick={resetNudgeHistory}
             className="inline-flex items-center gap-1 text-white/40 hover:text-white transition-colors"

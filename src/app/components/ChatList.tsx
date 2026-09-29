@@ -947,7 +947,7 @@ export function ChatList({
       )}
 
       {/* Iteration 4: missed-call overview between the filters and the log */}
-      {isWhatsAppCalls && iteration === 4 && <MissedCallsBanner />}
+      {isWhatsAppCalls && iteration === 4 && <MissedCallsBanner placement="call_log_banner" className="px-3 pb-3" />}
 
       {/* Chat List or Calls List */}
       <div className="flex-1 overflow-y-auto">

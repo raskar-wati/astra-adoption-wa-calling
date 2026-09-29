@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, animate, motion, useReducedMotion } from 'motion/react';
-import { ArrowRight, PhoneMissed, X } from 'lucide-react';
+import { Phone, PhoneMissed, X } from 'lucide-react';
 import copilot from '../../assets/nav/copilot.svg';
 import panelLeftOpen from '../../assets/nav/panel-left-open.svg';
 import { AstraLogo } from './AstraLogo';
@@ -148,7 +148,7 @@ const enter = (delay = 0) => ({
 // --- The island --------------------------------------------------------------
 
 export function WatiAIPrompt() {
-  const { iteration, morningBriefRun, replayMorningBrief, profile, showPinnedSurface } = useAstraAdoption();
+  const { page, iteration, morningBriefRun, replayMorningBrief, profile, callAstra } = useAstraAdoption();
   const reduce = useReducedMotion();
 
   const [beat, setBeat] = useState<Beat>('idle');
@@ -163,7 +163,8 @@ export function WatiAIPrompt() {
   const [baseWidth, setBaseWidth] = useState(600);
   const [contentHeight, setContentHeight] = useState(36);
 
-  const briefing = iteration === 3;
+  // The brief is a Team Inbox approach; on other pages the prompt stays plain.
+  const briefing = iteration === 3 && page === 'inbox';
   const expanded = briefing && atLeast(beat, 'greet') && beat !== 'residual';
 
   // Track the header slot and the story's natural height, so the island can
@@ -211,9 +212,10 @@ export function WatiAIPrompt() {
     return () => window.removeEventListener('keydown', onKey);
   }, [expanded, collapse]);
 
-  const meetAstra = () => {
+  // The brief ends by putting the user on a call with Astra, not on a page about it.
+  const talkToAstra = () => {
     collapse();
-    showPinnedSurface('education_page');
+    callAstra();
   };
 
   const onPillClick = () => {
@@ -425,11 +427,11 @@ export function WatiAIPrompt() {
                         </button>
                         <button
                           type="button"
-                          onClick={meetAstra}
-                          className="group inline-flex items-center gap-[4px] px-[12px] py-[6px] rounded-[8px] bg-wati-green text-white text-[13px] leading-[16px] font-medium hover:bg-wati-green-dark transition-colors"
+                          onClick={talkToAstra}
+                          className="inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-[8px] bg-wati-green text-white text-[13px] leading-[16px] font-medium hover:bg-wati-green-dark transition-colors"
                         >
-                          Meet Astra
-                          <ArrowRight className="size-[14px] transition-transform group-hover:translate-x-[2px]" />
+                          <Phone className="size-[13px]" />
+                          Talk to Astra
                         </button>
                       </motion.div>
                     </motion.div>

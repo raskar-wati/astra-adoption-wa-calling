@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import {
   AdoptionIteration,
+  AnalyticsIteration,
   AstraSource,
+  DemoPage,
   AstraStatus,
   PinnedSurface,
   NudgeHistory,
@@ -31,6 +33,11 @@ export interface AstraEvent {
 }
 
 interface AstraAdoptionValue {
+  /** The product page on screen; the dev switcher and the rail both set it. */
+  page: DemoPage;
+  setPage: (p: DemoPage) => void;
+  analyticsIteration: AnalyticsIteration;
+  setAnalyticsIteration: (i: AnalyticsIteration) => void;
   iteration: AdoptionIteration;
   setIteration: (i: AdoptionIteration) => void;
   /** Bumped each time the iteration 3 morning brief should play. */
@@ -94,6 +101,8 @@ interface AstraAdoptionValue {
 const AstraAdoptionCtx = createContext<AstraAdoptionValue | null>(null);
 
 export function AstraAdoptionProvider({ children }: React.PropsWithChildren<{}>) {
+  const [page, setPage] = useState<DemoPage>('inbox');
+  const [analyticsIteration, setAnalyticsIteration] = useState<AnalyticsIteration>(1);
   const [iteration, setIterationState] = useState<AdoptionIteration>(1);
   const [segment, setSegmentState] = useState<WorkspaceSegment>(3);
   const [status, setStatus] = useState<AstraStatus>('not-set-up');
@@ -264,7 +273,7 @@ export function AstraAdoptionProvider({ children }: React.PropsWithChildren<{}>)
   }, []);
 
   const value = useMemo<AstraAdoptionValue>(() => ({
-    iteration, setIteration, morningBriefRun, replayMorningBrief,
+    page, setPage, analyticsIteration, setAnalyticsIteration, iteration, setIteration, morningBriefRun, replayMorningBrief,
     astraPageOpen, openAstraPage, closeAstraPage,
     astraCallOpen, callAstra, endAstraCall,
     pinnedHighlight, showPinnedSurface,
@@ -275,7 +284,7 @@ export function AstraAdoptionProvider({ children }: React.PropsWithChildren<{}>)
     requestNudge, openNudgeDirectly, snoozeNudge, dismissNudge, closeNudge,
     startAstraTrial, enableAstra, resetNudgeHistory,
   }), [
-    iteration, setIteration, morningBriefRun, replayMorningBrief,
+    page, setPage, analyticsIteration, setAnalyticsIteration, iteration, setIteration, morningBriefRun, replayMorningBrief,
     astraPageOpen, openAstraPage, closeAstraPage,
     astraCallOpen, callAstra, endAstraCall,
     pinnedHighlight, showPinnedSurface,

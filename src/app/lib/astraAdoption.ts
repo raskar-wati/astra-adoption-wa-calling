@@ -21,7 +21,13 @@ export type RoutingMode = 'ai-first' | 'overflow';
 
 // Doubles as the `source` parameter on the hand-off URL, so the trigger that
 // earned the click is attributable on Astra's side.
-export type NudgeTrigger = 'low_pickup_rate' | 'after_hours' | 'logs_star_icon' | 'call_log_banner';
+export type NudgeTrigger =
+  | 'low_pickup_rate'
+  | 'after_hours'
+  | 'logs_star_icon'
+  | 'call_log_banner'
+  | 'analytics_banner'
+  | 'analytics_peek';
 
 // Which adoption approach the prototype is demoing. Iteration 1 interrupts with
 // pop-ups; iteration 2 waits to be opened — Astra sits pinned in the call log
@@ -31,6 +37,15 @@ export type NudgeTrigger = 'low_pickup_rate' | 'after_hours' | 'logs_star_icon' 
 // Iteration 4 is a plain banner over the call log: it only reports what was
 // missed, and Astra is pitched in the pop-up it opens.
 export type AdoptionIteration = 1 | 2 | 3 | 4;
+
+// Which product page the demo is on. Team Inbox holds every approach built so
+// far; Analytics is the WhatsApp Calls Analytics page.
+export type DemoPage = 'inbox' | 'analytics';
+
+// Approaches for the Analytics page, each opening the Astra pop-up:
+// 1. a missed-calls banner at the top of the page that names Astra;
+// 2. a small card peeking out from behind the Missed Calls overview card.
+export type AnalyticsIteration = 1 | 2;
 
 // Every place a hand-off to Astra can start from, for the `source` parameter.
 export type AstraSource = NudgeTrigger | 'call_log_pinned';
@@ -147,6 +162,8 @@ export function emptyNudgeHistory(): NudgeHistory {
     after_hours: emptyNudgeRecord(),
     logs_star_icon: emptyNudgeRecord(),
     call_log_banner: emptyNudgeRecord(),
+    analytics_banner: emptyNudgeRecord(),
+    analytics_peek: emptyNudgeRecord(),
   };
 }
 
@@ -215,7 +232,7 @@ export function astraSetupUrl(source: AstraSource): string {
 export const ROUTING_COPY: Record<RoutingMode, { label: string; blurb: string }> = {
   'ai-first': {
     label: 'AI-first',
-    blurb: 'Astra answers every inbound call. Your team picks up follow-ups and escalations.',
+    blurb: 'Astra answers every inbound call and handles transfers, follow-ups and escalations whenever required.',
   },
   overflow: {
     label: 'Overflow protection',
