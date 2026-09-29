@@ -1,5 +1,5 @@
 
-  # VoIP Channel
+  # Astra Adoption on Wati
 
   This is a code bundle for VoIP Channel. The original project is available at https://www.figma.com/design/xV4Qzyuxulf6a4tLCowpRH/VoIP-Channel.
 
