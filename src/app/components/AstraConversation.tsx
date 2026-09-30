@@ -110,7 +110,7 @@ export function AstraConversation() {
 
   return (
     <div className="h-full flex flex-col bg-white">
-      <div className="h-14 shrink-0 flex items-center gap-2.5 px-4 border-b border-[#e7e9e8]">
+      <div className="h-[56px] shrink-0 flex items-center gap-2.5 px-4 border-b border-[#e7e9e8]">
         <div className="w-8 h-8 rounded-full bg-white border border-astra-blue/20 flex items-center justify-center">
           <AstraLogo className="w-5 h-5" variant="brand" />
         </div>

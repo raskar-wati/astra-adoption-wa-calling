@@ -432,8 +432,9 @@ export function Sidebar({
     <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'w-0 min-w-0' : 'w-64 min-w-64'}`}>
       <div className={`transition-opacity duration-300 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+        {/* 56px header — its bottom line continues across every column */}
+        <div className="h-[56px] shrink-0 px-4 flex items-center border-b border-[#e7e9e8]">
+          <div className="w-full flex items-center justify-between">
             <h2 className="font-semibold whitespace-nowrap">Team Inbox</h2>
             <Button variant="ghost" size="sm" onClick={onSettingsClick}>
               <Settings className="w-4 h-4" />

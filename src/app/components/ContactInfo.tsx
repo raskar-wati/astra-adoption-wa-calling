@@ -198,28 +198,10 @@ function BackgroundImage15({ children }: React.PropsWithChildren<{}>) {
   );
 }
 
+// Section divider. Runs edge to edge: the negative margins cancel the panel's
+// horizontal padding.
 function ContactDetailsPanelLineBackgroundImage() {
-  return (
-    <BackgroundImage217 additionalClassNames={["h-0"]}>
-      <div className="absolute bottom-0 left-0 right-0 top-[-1px]">
-        <svg
-          className="block size-full"
-          fill="none"
-          preserveAspectRatio="none"
-          viewBox="0 0 338 1"
-        >
-          <line
-            id="Line"
-            opacity="0.1"
-            stroke="var(--stroke-0, #9CA19D)"
-            x2="338"
-            y1="0.5"
-            y2="0.5"
-          />
-        </svg>
-      </div>
-    </BackgroundImage217>
-  );
+  return <div className="shrink-0 self-stretch -mx-4 h-px bg-[#9ca19d]/10" />;
 }
 
 function DropdownIcon({ isExpanded }: { isExpanded: boolean }) {
@@ -1050,11 +1032,11 @@ export function ContactInfo({ contact, onClose, isMobile = false }: ContactInfoP
     >
       <div className="absolute border-[#e7e9e8] border-[0px_0px_0px_1px] border-solid bottom-0 left-[-1px] pointer-events-none right-0 top-0" />
       <div className="relative size-full">
-        <div className="box-border content-stretch flex flex-col gap-4 items-start justify-start px-4 py-3 relative size-full">
-          <ContactDetailsHeader name={contact.name} />
-          <ContactDetailsPanelLineBackgroundImage />
-          
-          <ContactDetailsPanelLineBackgroundImage />
+        <div className="box-border content-stretch flex flex-col gap-4 items-start justify-start px-4 pb-3 relative size-full">
+          {/* 56px header — its bottom line continues across every column */}
+          <div className="-mx-4 px-4 h-[56px] shrink-0 self-stretch flex items-center border-b border-[#e7e9e8]">
+            <ContactDetailsHeader name={contact.name} />
+          </div>
           <ContactDetailsInfoContainer 
             contact={contact} 
             isExpanded={isContactInfoExpanded} 

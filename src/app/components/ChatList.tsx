@@ -608,7 +608,8 @@ export function ChatList({
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white transition-all duration-300 ease-in-out">
+      {/* 56px header — its bottom line continues across every column */}
+      <div className="h-[56px] shrink-0 flex items-center justify-between px-4 bg-white border-b border-[#e7e9e8] transition-all duration-300 ease-in-out">
         {!isSearchExpanded ? (
           <>
             {/* Default Header Layout */}
@@ -898,8 +899,6 @@ export function ChatList({
         )}
       </div>
 
-      {/* Divider between header and filter tabs */}
-      <div className="border-b border-[#F4F1ED]"></div>
 
       {/* Filter Tabs */}
       {(
